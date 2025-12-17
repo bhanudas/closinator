@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Rules for automatically updating Case status based on configurable criteria.</description>
+    <label>Case Status Rule</label>
+    <pluralLabel>Case Status Rules</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>
+
