@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Test Escalate Immediately</label>
+    <protected>false</protected>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Execution_Order__c</field>
+        <value xsi:type="xsd:double">6</value>
+    </values>
+    <values>
+        <field>Source_Status__c</field>
+        <value xsi:type="xsd:string">New</value>
+    </values>
+    <values>
+        <field>Target_Status__c</field>
+        <value xsi:type="xsd:string">Escalated</value>
+    </values>
+    <values>
+        <field>Days_Since_Created__c</field>
+        <value xsi:type="xsd:double">0</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">TEST RULE - Immediately escalate New cases. DELETE AFTER TESTING.</value>
+    </values>
+    <values>
+        <field>Stop_Processing__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+</CustomMetadata>
+
