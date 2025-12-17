@@ -6,6 +6,7 @@ A configurable, metadata-driven Salesforce batch system that automatically updat
 
 - [Features](#features)
 - [Installation](#installation)
+- [Security](#security)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Manual Test Runner](#manual-test-runner)
@@ -31,6 +32,8 @@ A configurable, metadata-driven Salesforce batch system that automatically updat
 - **Email Notifications**: Configurable email notifications for errors and completion
 - **Metrics Tracking**: Built-in batch metrics tracking
 - **Lightning Web Component**: UI for managing scheduler and settings
+- **Dedicated Lightning Tab**: Easy access via "Case Auto-Closer" tab in Lightning navigation
+- **Lightning App Page**: Pre-configured page with scheduler manager component
 
 ### Key Components
 
@@ -41,6 +44,8 @@ A configurable, metadata-driven Salesforce batch system that automatically updat
 - **Logger** (`util_closer_Logger`): Debug logging utility
 - **Notification Service** (`util_closer_NotificationService`): Email notification handling
 - **Scheduler Manager LWC**: Lightning Web Component for managing the scheduler
+- **Lightning Tab** (`util_closer_Scheduler_Manager`): Dedicated tab for accessing the scheduler manager
+- **Lightning App Page** (`util_closer_Scheduler_Manager`): Pre-configured page containing the scheduler manager component
 
 ## Installation
 
@@ -82,10 +87,14 @@ Expected: All `util_closer_*` classes should be listed.
 
 ### Post-Deployment Setup
 
-1. **Assign Permission Sets** (optional but recommended):
+1. **Assign Permission Sets** (required):
 
-   - `util_closer_Administrator`: Full access to manage the system
-   - `util_closer_Operator`: Basic access to run batch jobs
+   See the [Security](#security) section for detailed information on permission sets.
+   
+   - `util_closer_Administrator`: Full access to manage the system (assign to admins)
+   - `util_closer_Operator`: Basic access to run batch jobs (assign to operators)
+   
+   **Important:** Users must have appropriate Case object permissions (Read and Edit) to run batch jobs successfully.
 
 2. **Configure Custom Settings:**
 
@@ -98,6 +107,170 @@ sf apex run --file scripts/apex/create-settings.apex --target-org myorg
 3. **Create Custom Metadata Rules:**
 
    Deploy the Custom Metadata Type records from `force-app/main/default/customMetadata/` or create your own rules via Setup → Custom Metadata Types.
+
+4. **Access the Lightning Tab:**
+
+   After deployment, users with the `util_closer_Administrator` permission set will see the "Case Auto-Closer" tab in their Lightning navigation. The tab provides direct access to the scheduler manager interface.
+
+## Security
+
+The Case Status Auto-Closer system uses Salesforce's security model to control access. All Apex classes are declared with `with sharing`, which means they respect the user's object and field-level security permissions.
+
+### Permission Sets
+
+Two permission sets are provided to grant appropriate access levels:
+
+#### Administrator Permission Set (`util_closer_Administrator`)
+
+**Purpose:** Full access to configure and manage the Case Status Auto-Closer system including settings, scheduling, and manual batch execution.
+
+**Access Granted:**
+
+- **Apex Class Access:** All `util_closer_*` classes enabled
+  - `util_closer_CaseStatusBatch`
+  - `util_closer_CaseStatusScheduler`
+  - `util_closer_SchedulerController`
+  - `util_closer_SettingsService`
+  - `util_closer_RuleEngine`
+  - `util_closer_NotificationService`
+  - `util_closer_Logger`
+  - `util_closer_BatchMetrics`
+
+- **Custom Settings Access:** Full CRUD access to `util_closer_Settings__c`
+  - Read, Create, Edit, Delete
+
+- **Field-Level Security:** All fields editable
+  - `Batch_Size__c` - Read/Edit
+  - `Completion_Notification_Emails__c` - Read/Edit
+  - `Cron_Expression__c` - Read/Edit
+  - `Debug_Mode__c` - Read/Edit
+  - `Error_Notification_Emails__c` - Read/Edit
+  - `Is_Active__c` - Read/Edit
+  - `Scheduled_Job_Name__c` - Read/Edit
+
+- **System Permissions:**
+  - `API Enabled` - Required for Apex execution
+  - `Run Flows` - Required for scheduled job execution
+
+- **Tab Visibility:**
+  - `util_closer_Scheduler_Manager` tab - Visible (provides access to the scheduler manager interface)
+
+**When to Use:** Assign to system administrators, Salesforce admins, or users who need to configure and manage the system.
+
+#### Operator Permission Set (`util_closer_Operator`)
+
+**Purpose:** Ability to view settings and manually execute the Case Status Auto-Closer batch job. Cannot modify configuration.
+
+**Access Granted:**
+
+- **Apex Class Access:** All `util_closer_*` classes enabled (same as Administrator)
+
+- **Custom Settings Access:** Read-only access to `util_closer_Settings__c`
+  - Read only (no Create, Edit, or Delete)
+
+- **Field-Level Security:** All fields read-only
+  - `Batch_Size__c` - Read only
+  - `Completion_Notification_Emails__c` - Read only
+  - `Cron_Expression__c` - Read only
+  - `Debug_Mode__c` - Read only
+  - `Error_Notification_Emails__c` - Read only
+  - `Is_Active__c` - Read only
+  - `Scheduled_Job_Name__c` - Read only
+
+- **System Permissions:**
+  - `API Enabled` - Required for Apex execution
+
+**When to Use:** Assign to users who need to run batch jobs manually or view system status, but should not modify configuration.
+
+### Assigning Permission Sets
+
+#### Via Salesforce UI
+
+1. Navigate to **Setup** → **Users** → **Permission Sets**
+2. Find the permission set (`Case Auto-Closer Administrator` or `Case Auto-Closer Operator`)
+3. Click **Manage Assignments**
+4. Click **Add Assignments**
+5. Select users and click **Assign**
+
+#### Via Salesforce CLI
+
+```bash
+# Assign Administrator permission set to a user
+sf data create record \
+  --sobject PermissionSetAssignment \
+  --values "AssigneeId=USER_ID PermissionSetId=PERMISSION_SET_ID" \
+  --target-org myorg
+
+# Query permission set IDs first
+sf data query \
+  --query "SELECT Id, Name FROM PermissionSet WHERE Name IN ('util_closer_Administrator', 'util_closer_Operator')" \
+  --target-org myorg
+```
+
+### Case Object Permissions
+
+**Important:** Users must have appropriate Case object permissions to run the batch job successfully. The batch job reads and updates Case records, so users need:
+
+- **Read Access** to Case object and fields:
+  - `Id`
+  - `Status`
+  - `LastModifiedDate`
+  - `CreatedDate`
+  - Any fields referenced in rule criteria (e.g., Record Type, Last Activity Date)
+
+- **Edit Access** to Case object and `Status` field:
+  - Required to update Case statuses based on rules
+
+**Note:** Since all Apex classes use `with sharing`, the batch job respects the running user's object and field-level security. If a user doesn't have edit access to Cases, the batch job will fail for those records.
+
+### Custom Metadata Type Access
+
+Custom Metadata Types are readable by all users by default. However, to create or modify Custom Metadata records (`util_closer_Case_Status_Rule__mdt`), users need:
+
+- **Customize Application** permission (typically System Administrator profile)
+- Or a custom permission set with Custom Metadata Type access
+
+**Recommendation:** Only System Administrators should create or modify Custom Metadata rules.
+
+### Security Best Practices
+
+1. **Principle of Least Privilege:**
+   - Assign `util_closer_Operator` to most users who only need to run jobs
+   - Reserve `util_closer_Administrator` for users who need to configure the system
+
+2. **Case Object Security:**
+   - Ensure users have appropriate Case object permissions based on your organization's security model
+   - Consider using sharing rules if Cases need to be restricted by ownership or criteria
+
+3. **Audit Trail:**
+   - The system logs all batch executions (if Debug Mode is enabled)
+   - Review batch job execution logs regularly via Setup → Apex Jobs
+
+4. **Email Notifications:**
+   - Configure error and completion notification emails in Custom Settings
+   - Only administrators should be able to modify notification settings
+
+5. **Scheduled Job Security:**
+   - Scheduled jobs run in the context of the user who scheduled them
+   - Ensure the scheduling user has appropriate permissions
+   - Consider using a dedicated integration user for scheduled jobs
+
+### Troubleshooting Permission Issues
+
+**Issue:** User cannot run batch job
+- **Solution:** Verify user has the appropriate permission set assigned and Case object edit permissions
+
+**Issue:** Batch job fails with "insufficient access rights" errors
+- **Solution:** Check Case object and field-level security for the running user
+
+**Issue:** User cannot view or edit Custom Settings
+- **Solution:** Verify permission set assignment and field-level security permissions
+
+**Issue:** Scheduled job fails to execute
+- **Solution:** Verify the user who scheduled the job still has active permission set and Case object access
+
+**Issue:** User cannot see the "Case Auto-Closer" tab
+- **Solution:** Verify the user has the `util_closer_Administrator` permission set assigned, which includes tab visibility for `util_closer_Scheduler_Manager`
 
 ## Configuration
 
@@ -184,14 +357,29 @@ System.debug('Scheduled Job ID: ' + jobId);
 
 ### Using the Lightning Web Component
 
-1. Navigate to any Lightning page
-2. Add the `util_closer_schedulerManager` component
-3. Use the UI to:
-   - View current job status
-   - Schedule/unschedule jobs
-   - Update settings
+#### Option 1: Dedicated Tab (Recommended)
+
+The easiest way to access the scheduler manager is through the dedicated "Case Auto-Closer" tab:
+
+1. **Access the Tab:**
+   - Users with the `util_closer_Administrator` permission set will see the "Case Auto-Closer" tab in their Lightning navigation
+   - Click the tab to open the scheduler manager interface
+
+2. **Use the Interface:**
+   - View current job status and next execution time
+   - Schedule or unschedule jobs
+   - Update system settings (batch size, debug mode, cron expression, etc.)
    - Run batch jobs immediately
-   - View next execution time
+   - Configure email notifications
+
+#### Option 2: Add to Custom Lightning Page
+
+You can also add the component to any Lightning page:
+
+1. Navigate to **Setup** → **Lightning App Builder**
+2. Create or edit a Lightning page
+3. Add the `util_closer_schedulerManager` component
+4. Use the UI to manage scheduler and settings
 
 ### Monitoring Batch Execution
 
@@ -338,9 +526,11 @@ closinator/
 │       └── default/
 │           ├── classes/               # Apex classes
 │           ├── customMetadata/        # Custom Metadata records
+│           ├── flexipages/            # Lightning App Pages
 │           ├── lwc/                   # Lightning Web Components
 │           ├── objects/               # Custom objects/fields
-│           └── permissionsets/        # Permission sets
+│           ├── permissionsets/        # Permission sets
+│           └── tabs/                  # Lightning Tabs
 ├── scripts/
 │   └── apex/                          # Utility Apex scripts
 └── manifest/

@@ -82,4 +82,8 @@
         <enabled>true</enabled>
         <name>RunFlow</name>
     </userPermissions>
+    <tabSettings>
+        <tab>util_closer_Scheduler_Manager</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
 </PermissionSet>
