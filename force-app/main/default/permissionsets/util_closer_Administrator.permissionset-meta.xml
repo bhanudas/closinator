@@ -3,6 +3,34 @@
     <description>Full access to configure and manage the Case Status Auto-Closer system including settings, scheduling, and manual batch execution.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Case Auto-Closer Administrator</label>
+    <classAccesses>
+        <apexClass>util_closer_BatchMetrics</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_CaseStatusBatch</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_CaseStatusScheduler</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_Logger</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_NotificationService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_RuleEngine</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_SettingsService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <customSettingAccesses>
         <enabled>true</enabled>
         <name>util_closer_Settings__c</name>
@@ -51,4 +79,3 @@
         <name>RunFlow</name>
     </userPermissions>
 </PermissionSet>
-

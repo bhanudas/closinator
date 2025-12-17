@@ -3,6 +3,34 @@
     <description>Ability to view settings and manually execute the Case Status Auto-Closer batch job. Cannot modify configuration.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Case Auto-Closer Operator</label>
+    <classAccesses>
+        <apexClass>util_closer_BatchMetrics</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_CaseStatusBatch</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_CaseStatusScheduler</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_Logger</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_NotificationService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_RuleEngine</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_SettingsService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <customSettingAccesses>
         <enabled>true</enabled>
         <name>util_closer_Settings__c</name>
@@ -47,4 +75,3 @@
         <name>ApiEnabled</name>
     </userPermissions>
 </PermissionSet>
-
