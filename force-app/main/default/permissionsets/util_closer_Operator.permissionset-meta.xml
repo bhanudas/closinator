@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Ability to view settings and manually execute the Case Status Auto-Closer batch job. Cannot modify configuration.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Case Auto-Closer Operator</label>
+    <customSettingAccesses>
+        <enabled>true</enabled>
+        <name>util_closer_Settings__c</name>
+    </customSettingAccesses>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Batch_Size__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Completion_Notification_Emails__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Cron_Expression__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Debug_Mode__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Error_Notification_Emails__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Is_Active__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>util_closer_Settings__c.Scheduled_Job_Name__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ApiEnabled</name>
+    </userPermissions>
+</PermissionSet>
+
