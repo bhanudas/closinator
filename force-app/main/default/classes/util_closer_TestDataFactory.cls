@@ -220,14 +220,14 @@ public class util_closer_TestDataFactory {
      */
     public static User createTestUser(String profileName) {
         Profile p = [SELECT Id FROM Profile WHERE Name = :profileName LIMIT 1];
-        String uniqueId = String.valueOf(DateTime.now().getTime()) + String.valueOf(Math.random()).substring(2, 6);
+        String uniqueId = String.valueOf(Math.abs(Crypto.getRandomInteger()));
         
         return new User(
             FirstName = 'Test',
-            LastName = 'User' + uniqueId,
-            Email = 'testuser' + uniqueId + '@test.util_closer.com',
-            Username = 'testuser' + uniqueId + '@test.util_closer.com',
-            Alias = 'tuser' + uniqueId.substring(0, 3),
+            LastName = 'User' + uniqueId.substring(0, 5),
+            Email = 'testuser' + uniqueId + '@example.com',
+            Username = 'testuser' + uniqueId + '@example.com',
+            Alias = ('tu' + uniqueId).substring(0, 8),
             TimeZoneSidKey = 'America/Los_Angeles',
             LocaleSidKey = 'en_US',
             EmailEncodingKey = 'UTF-8',
