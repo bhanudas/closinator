@@ -1,0 +1,85 @@
+.status-section {
+    background-color: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    border-radius: 0.5rem;
+}
+
+.config-section {
+    background-color: var(--slds-g-color-neutral-base-100, #ffffff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.5rem;
+}
+
+.settings-section {
+    background-color: var(--slds-g-color-neutral-base-100, #ffffff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.5rem;
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+}
+
+.status-label {
+    font-size: 0.75rem;
+    color: var(--slds-g-color-neutral-base-30, #706e6b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.status-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--slds-g-color-neutral-base-10, #080707);
+}
+
+.setting-label {
+    font-weight: 600;
+    color: var(--slds-g-color-neutral-base-30, #706e6b);
+    margin-right: 0.5rem;
+}
+
+.setting-value {
+    color: var(--slds-g-color-neutral-base-10, #080707);
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.success {
+    --slds-c-badge-color-background: var(--slds-g-color-success-base-50, #2e844a);
+    --slds-c-badge-text-color: var(--slds-g-color-neutral-base-100, #ffffff);
+}
+
+.warning {
+    --slds-c-badge-color-background: var(--slds-g-color-warning-base-50, #fe9339);
+    --slds-c-badge-text-color: var(--slds-g-color-neutral-base-10, #080707);
+}
+
+.running-badge {
+    --slds-c-badge-color-background: var(--slds-g-color-brand-base-50, #0176d3);
+    --slds-c-badge-text-color: var(--slds-g-color-neutral-base-100, #ffffff);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.slds-modal__container {
+    max-width: 30rem;
+}
+

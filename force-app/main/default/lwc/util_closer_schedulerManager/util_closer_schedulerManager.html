@@ -1,0 +1,234 @@
+<template>
+    <lightning-card title="Case Status Auto-Closer Scheduler" icon-name="standard:scheduling_workspace">
+        <div if:true={isLoading} class="slds-is-relative">
+            <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <!-- Job Status Section -->
+            <div class="slds-box slds-m-bottom_medium status-section">
+                <div class="slds-grid slds-wrap slds-gutters">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <div class="status-item">
+                            <span class="status-label">Status</span>
+                            <lightning-badge label={statusLabel} class={statusVariant}></lightning-badge>
+                            <lightning-badge if:true={isBatchRunning} label="Batch Running" class="slds-m-left_x-small running-badge"></lightning-badge>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <div class="status-item">
+                            <span class="status-label">Next Run</span>
+                            <span class="status-value">{formattedNextFireTime}</span>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <div class="status-item">
+                            <span class="status-label">Job Name</span>
+                            <span class="status-value">{jobName}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Configuration Section -->
+            <div class="slds-box slds-m-bottom_medium config-section">
+                <h3 class="slds-text-heading_small slds-m-bottom_small">Schedule Configuration</h3>
+                
+                <div class="slds-grid slds-wrap slds-gutters">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <lightning-combobox
+                            name="cronPreset"
+                            label="Preset Schedule"
+                            value={selectedPreset}
+                            options={cronPresets}
+                            onchange={handlePresetChange}>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <lightning-input
+                            type="text"
+                            label="Cron Expression"
+                            value={cronExpression}
+                            onchange={handleCronChange}
+                            disabled={isPresetSelected}>
+                        </lightning-input>
+                    </div>
+                </div>
+
+                <div class="slds-m-top_medium button-group">
+                    <lightning-button
+                        variant="brand"
+                        label={scheduleButtonLabel}
+                        onclick={handleSchedule}
+                        disabled={isLoading}>
+                    </lightning-button>
+                    <lightning-button
+                        variant="neutral"
+                        label="Unschedule"
+                        onclick={handleUnschedule}
+                        disabled={unscheduleDisabled}
+                        class="slds-m-left_x-small">
+                    </lightning-button>
+                    <lightning-button
+                        variant="success"
+                        label="Run Now"
+                        onclick={handleRunNowClick}
+                        disabled={runNowDisabled}
+                        class="slds-m-left_x-small">
+                    </lightning-button>
+                    <lightning-button
+                        variant="neutral"
+                        label="Refresh"
+                        onclick={handleRefresh}
+                        disabled={isLoading}
+                        class="slds-m-left_x-small"
+                        icon-name="utility:refresh">
+                    </lightning-button>
+                </div>
+            </div>
+
+            <!-- Current Settings Section -->
+            <div class="slds-box settings-section">
+                <div class="slds-grid slds-grid_align-spread slds-m-bottom_small">
+                    <h3 class="slds-text-heading_small">Current Settings</h3>
+                    <template if:false={isEditMode}>
+                        <lightning-button
+                            variant="neutral"
+                            label="Edit"
+                            onclick={handleEditSettings}
+                            icon-name="utility:edit">
+                        </lightning-button>
+                    </template>
+                    <template if:true={isEditMode}>
+                        <div>
+                            <lightning-button
+                                variant="brand"
+                                label="Save"
+                                onclick={handleSaveSettings}
+                                class="slds-m-right_x-small">
+                            </lightning-button>
+                            <lightning-button
+                                variant="neutral"
+                                label="Cancel"
+                                onclick={handleCancelEdit}>
+                            </lightning-button>
+                        </div>
+                    </template>
+                </div>
+
+                <template if:false={isEditMode}>
+                    <!-- Read-only view -->
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
+                            <span class="setting-label">Batch Size:</span>
+                            <span class="setting-value">{batchSize}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
+                            <span class="setting-label">Debug Mode:</span>
+                            <span class="setting-value">{debugModeLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
+                            <span class="setting-label">Active:</span>
+                            <span class="setting-value">{activeLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
+                            <span class="setting-label">Cron:</span>
+                            <span class="setting-value">{cronExpression}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-p-around_x-small">
+                            <span class="setting-label">Error Emails:</span>
+                            <span class="setting-value">{errorEmails}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-p-around_x-small">
+                            <span class="setting-label">Completion Emails:</span>
+                            <span class="setting-value">{completionEmails}</span>
+                        </div>
+                    </div>
+                </template>
+
+                <template if:true={isEditMode}>
+                    <!-- Edit view -->
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                            <lightning-input
+                                type="number"
+                                label="Batch Size"
+                                value={batchSize}
+                                data-field="batchSize"
+                                onchange={handleSettingChange}
+                                min="1"
+                                max="2000">
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                            <lightning-input
+                                type="checkbox"
+                                label="Debug Mode"
+                                checked={debugMode}
+                                data-field="debugMode"
+                                onchange={handleSettingChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                            <lightning-input
+                                type="checkbox"
+                                label="Active"
+                                checked={isActive}
+                                data-field="isActive"
+                                onchange={handleSettingChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                            <lightning-textarea
+                                label="Error Notification Emails (semicolon-separated)"
+                                value={errorEmails}
+                                data-field="errorEmails"
+                                onchange={handleSettingChange}>
+                            </lightning-textarea>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                            <lightning-textarea
+                                label="Completion Notification Emails (semicolon-separated)"
+                                value={completionEmails}
+                                data-field="completionEmails"
+                                onchange={handleSettingChange}>
+                            </lightning-textarea>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </lightning-card>
+
+    <!-- Confirmation Modal -->
+    <template if:true={showConfirmModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium">Confirm Run Now</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p>Are you sure you want to run the batch job now?</p>
+                    <p class="slds-m-top_small slds-text-color_weak">
+                        This will process Cases based on the configured rules.
+                    </p>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button
+                        variant="neutral"
+                        label="Cancel"
+                        onclick={handleCancelRunNow}>
+                    </lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Run Now"
+                        onclick={handleConfirmRunNow}
+                        class="slds-m-left_x-small">
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>
+
