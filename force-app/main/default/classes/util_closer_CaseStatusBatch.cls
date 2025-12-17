@@ -38,8 +38,7 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
             return Database.getQueryLocator('SELECT Id FROM Case WHERE Id = null');
         }
         
-        String query = 'SELECT Id, Status, RecordTypeId, RecordType.DeveloperName, ' +
-                       'LastModifiedDate, CreatedDate, LastActivityDate ' +
+        String query = 'SELECT Id, Status, LastModifiedDate, CreatedDate ' +
                        'FROM Case ' +
                        'WHERE IsClosed = false ' +
                        'AND Status IN :sourceStatuses';

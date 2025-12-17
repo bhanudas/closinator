@@ -40,8 +40,7 @@ public with sharing class util_closer_RuleEngine {
             allSourceStatuses.addAll(parseStatusList(rule.Source_Status__c));
         }
         
-        String query = 'SELECT Id, Status, RecordTypeId, RecordType.DeveloperName, ' +
-                       'LastModifiedDate, CreatedDate, LastActivityDate ' +
+        String query = 'SELECT Id, Status, LastModifiedDate, CreatedDate ' +
                        'FROM Case ' +
                        'WHERE IsClosed = false ' +
                        'AND Status IN :sourceStatuses';
@@ -133,34 +132,47 @@ public with sharing class util_closer_RuleEngine {
             }
         }
         
-        // Check days since last activity
+        // Check days since last activity - only if the field exists on the object
         if (rule.Days_Since_Last_Activity__c != null) {
-            Date lastActivity = (Date)c.get('LastActivityDate');
-            if (lastActivity != null) {
-                Integer daysSinceActivity = lastActivity.daysBetween(Date.today());
-                if (daysSinceActivity < rule.Days_Since_Last_Activity__c) {
-                    return false;
+            try {
+                Object lastActivityObj = c.get('LastActivityDate');
+                if (lastActivityObj != null) {
+                    Date lastActivity = (Date)lastActivityObj;
+                    Integer daysSinceActivity = lastActivity.daysBetween(Date.today());
+                    if (daysSinceActivity < rule.Days_Since_Last_Activity__c) {
+                        return false;
+                    }
                 }
+            } catch (SObjectException e) {
+                // Field not available, skip this check
             }
         }
         
-        // Check record type inclusion
+        // Check record type inclusion - only if RecordType is available
         if (String.isNotBlank(rule.Record_Type_Developer_Names__c)) {
             Set<String> includedRecordTypes = parseList(rule.Record_Type_Developer_Names__c);
-            SObject recordType = c.getSObject('RecordType');
-            String caseRecordType = recordType != null ? (String)recordType.get('DeveloperName') : null;
-            if (caseRecordType == null || !includedRecordTypes.contains(caseRecordType)) {
-                return false;
+            try {
+                SObject recordType = c.getSObject('RecordType');
+                String caseRecordType = recordType != null ? (String)recordType.get('DeveloperName') : null;
+                if (caseRecordType == null || !includedRecordTypes.contains(caseRecordType)) {
+                    return false;
+                }
+            } catch (SObjectException e) {
+                // RecordType not available, skip this check
             }
         }
         
-        // Check record type exclusion
+        // Check record type exclusion - only if RecordType is available
         if (String.isNotBlank(rule.Exclude_Record_Type_Developer_Names__c)) {
             Set<String> excludedRecordTypes = parseList(rule.Exclude_Record_Type_Developer_Names__c);
-            SObject recordType = c.getSObject('RecordType');
-            String caseRecordType = recordType != null ? (String)recordType.get('DeveloperName') : null;
-            if (caseRecordType != null && excludedRecordTypes.contains(caseRecordType)) {
-                return false;
+            try {
+                SObject recordType = c.getSObject('RecordType');
+                String caseRecordType = recordType != null ? (String)recordType.get('DeveloperName') : null;
+                if (caseRecordType != null && excludedRecordTypes.contains(caseRecordType)) {
+                    return false;
+                }
+            } catch (SObjectException e) {
+                // RecordType not available, skip this check
             }
         }
         
