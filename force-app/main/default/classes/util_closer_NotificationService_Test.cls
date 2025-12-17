@@ -166,5 +166,72 @@ private class util_closer_NotificationService_Test {
         // Verify - single email to multiple recipients
         System.assertEquals(1, emailsAfter - emailsBefore, 'One email should be sent to multiple recipients');
     }
+    
+    @isTest
+    static void testSendErrorNotification_WithExceptionDetails() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, 'error@test.com', null
+        );
+        
+        Exception testException = new DmlException('Test DML error');
+        testException.setMessage('Test message');
+        
+        // Execute
+        Test.startTest();
+        Integer emailsBefore = Limits.getEmailInvocations();
+        util_closer_NotificationService.sendErrorNotification(
+            'Test Error',
+            'Error body',
+            testException
+        );
+        Integer emailsAfter = Limits.getEmailInvocations();
+        Test.stopTest();
+        
+        // Verify - email should include exception details
+        System.assertEquals(1, emailsAfter - emailsBefore, 'Email should be sent with exception details');
+    }
+    
+    @isTest
+    static void testSendCompletionReport_MultipleRecipients() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, 'user1@test.com;user2@test.com'
+        );
+        
+        util_closer_BatchMetrics metrics = new util_closer_BatchMetrics();
+        metrics.endTime = DateTime.now();
+        
+        // Execute
+        Test.startTest();
+        Integer emailsBefore = Limits.getEmailInvocations();
+        util_closer_NotificationService.sendCompletionReport(metrics);
+        Integer emailsAfter = Limits.getEmailInvocations();
+        Test.stopTest();
+        
+        // Verify
+        System.assertEquals(1, emailsAfter - emailsBefore, 'One email should be sent to multiple recipients');
+    }
+    
+    @isTest
+    static void testSendCompletionReport_WithEmptyMetrics() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, 'completion@test.com'
+        );
+        
+        util_closer_BatchMetrics metrics = new util_closer_BatchMetrics();
+        metrics.endTime = DateTime.now();
+        
+        // Execute
+        Test.startTest();
+        Integer emailsBefore = Limits.getEmailInvocations();
+        util_closer_NotificationService.sendCompletionReport(metrics);
+        Integer emailsAfter = Limits.getEmailInvocations();
+        Test.stopTest();
+        
+        // Verify - should send email even with empty metrics
+        System.assertEquals(1, emailsAfter - emailsBefore, 'Email should be sent even with empty metrics');
+    }
 }
 

@@ -20,6 +20,8 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
     
     /**
      * @description Start method builds and executes query for Cases to process.
+     * Uses CaseDataAccess class to query without sharing restrictions, allowing
+     * the batch to process all Cases matching the criteria regardless of sharing rules.
      * @param bc The batchable context.
      * @return QueryLocator for Cases matching rule criteria.
      */
@@ -38,14 +40,11 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
             return Database.getQueryLocator('SELECT Id FROM Case WHERE Id = null');
         }
         
-        String query = 'SELECT Id, Status, LastModifiedDate, CreatedDate ' +
-                       'FROM Case ' +
-                       'WHERE IsClosed = false ' +
-                       'AND Status IN :sourceStatuses';
-        
-        util_closer_Logger.debug('CaseStatusBatch', 'Query: ' + query);
-        
-        return Database.getQueryLocator(query);
+        // Use CaseDataAccess to query without sharing restrictions
+        // This allows the batch to process all Cases matching criteria,
+        // regardless of the running user's sharing access
+        util_closer_Logger.debug('CaseStatusBatch', 'Querying Cases without sharing restrictions for statuses: ' + this.sourceStatuses);
+        return util_closer_CaseDataAccess.queryCasesByStatus(this.sourceStatuses);
     }
     
     /**

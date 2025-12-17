@@ -2,17 +2,18 @@
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
     <description>Case Auto-Closer Scheduler Manager page for managing batch job scheduling and settings</description>
     <flexiPageRegions>
-        <componentInstances>
-            <componentName>util_closer_schedulerManager</componentName>
-            <identifier>util_closer_schedulerManager</identifier>
-        </componentInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>util_closer_schedulerManager</componentName>
+                <identifier>util_closer_schedulerManager</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>main</name>
         <type>Region</type>
     </flexiPageRegions>
-    <label>Case Auto-Closer Scheduler Manager</label>
     <masterLabel>Case Auto-Closer Scheduler Manager</masterLabel>
     <template>
-        <name>one:oneRegionTemplate</name>
+        <name>flexipage:defaultAppHomeTemplate</name>
     </template>
     <type>AppPage</type>
 </FlexiPage>

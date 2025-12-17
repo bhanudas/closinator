@@ -34,6 +34,7 @@ A configurable, metadata-driven Salesforce batch system that automatically updat
 - **Lightning Web Component**: UI for managing scheduler and settings
 - **Dedicated Lightning Tab**: Easy access via "Case Auto-Closer" tab in Lightning navigation
 - **Lightning App Page**: Pre-configured page with scheduler manager component
+- **Without Sharing Query Layer**: Query all Case records regardless of sharing rules for maximum batch coverage
 
 ### Key Components
 
@@ -46,6 +47,7 @@ A configurable, metadata-driven Salesforce batch system that automatically updat
 - **Scheduler Manager LWC**: Lightning Web Component for managing the scheduler
 - **Lightning Tab** (`util_closer_Scheduler_Manager`): Dedicated tab for accessing the scheduler manager
 - **Lightning App Page** (`util_closer_Scheduler_Manager`): Pre-configured page containing the scheduler manager component
+- **Case Data Access** (`util_closer_CaseDataAccess`): Without sharing data access layer for querying all Cases
 
 ## Installation
 
@@ -114,7 +116,7 @@ sf apex run --file scripts/apex/create-settings.apex --target-org myorg
 
 ## Security
 
-The Case Status Auto-Closer system uses Salesforce's security model to control access. All Apex classes are declared with `with sharing`, which means they respect the user's object and field-level security permissions.
+The Case Status Auto-Closer system uses Salesforce's security model to control access. Most Apex classes are declared with `with sharing` to respect the user's object and field-level security permissions. However, the system includes a `without sharing` data access layer (`util_closer_CaseDataAccess`) that allows querying all Case records regardless of sharing rules, ensuring maximum batch coverage while still respecting field-level security for updates.
 
 ### Permission Sets
 
@@ -129,6 +131,7 @@ Two permission sets are provided to grant appropriate access levels:
 - **Apex Class Access:** All `util_closer_*` classes enabled
   - `util_closer_CaseStatusBatch`
   - `util_closer_CaseStatusScheduler`
+  - `util_closer_CaseDataAccess`
   - `util_closer_SchedulerController`
   - `util_closer_SettingsService`
   - `util_closer_RuleEngine`
@@ -164,6 +167,15 @@ Two permission sets are provided to grant appropriate access levels:
 **Access Granted:**
 
 - **Apex Class Access:** All `util_closer_*` classes enabled (same as Administrator)
+  - `util_closer_CaseStatusBatch`
+  - `util_closer_CaseStatusScheduler`
+  - `util_closer_CaseDataAccess`
+  - `util_closer_SchedulerController`
+  - `util_closer_SettingsService`
+  - `util_closer_RuleEngine`
+  - `util_closer_NotificationService`
+  - `util_closer_Logger`
+  - `util_closer_BatchMetrics`
 
 - **Custom Settings Access:** Read-only access to `util_closer_Settings__c`
   - Read only (no Create, Edit, or Delete)
@@ -221,7 +233,26 @@ sf data query \
 - **Edit Access** to Case object and `Status` field:
   - Required to update Case statuses based on rules
 
-**Note:** Since all Apex classes use `with sharing`, the batch job respects the running user's object and field-level security. If a user doesn't have edit access to Cases, the batch job will fail for those records.
+#### Without Sharing Query Layer
+
+The system includes a **without sharing** data access layer (`util_closer_CaseDataAccess`) that allows the batch job to query **all Case records** matching the rule criteria, regardless of sharing rules. This ensures maximum coverage for batch processing.
+
+**How it works:**
+- **Query Phase**: Uses `util_closer_CaseDataAccess` (without sharing) to query all Cases matching rule criteria, bypassing sharing restrictions
+- **Update Phase**: Uses `util_closer_CaseStatusBatch` (with sharing) to respect field-level security when updating records
+
+**Benefits:**
+- Processes all Cases matching criteria, not just those visible to the running user
+- Ensures consistent batch execution regardless of who schedules the job
+- Maximizes the number of Cases that can be processed
+
+**Security Considerations:**
+- Updates still respect field-level security (FLS) - users without edit access to Cases will see update failures
+- Sharing rules are bypassed only for querying, not for updating
+- The running user must still have appropriate object permissions for updates to succeed
+- All batch executions are logged and auditable
+
+**Note:** If a user doesn't have edit access to Cases, the batch job will still query all matching Cases but will fail to update those records. Check batch execution logs for specific failure reasons.
 
 ### Custom Metadata Type Access
 

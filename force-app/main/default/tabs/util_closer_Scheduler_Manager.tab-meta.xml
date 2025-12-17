@@ -3,7 +3,6 @@
     <customObject>false</customObject>
     <description>Case Auto-Closer Scheduler Manager - Manage batch job scheduling and settings</description>
     <flexiPage>util_closer_Scheduler_Manager</flexiPage>
-    <icon>custom:custom63</icon>
     <label>Case Auto-Closer</label>
     <motif>Custom53: Clock</motif>
 </Tab>
