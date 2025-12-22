@@ -1,0 +1,40 @@
+{
+  "org": "dcca-migration",
+  "queried": "2025-12-19",
+  "statusValues": [
+    { "label": "New", "value": "New", "active": true },
+    { "label": "On Hold", "value": "On Hold", "active": true },
+    { "label": "Escalated", "value": "Escalated", "active": true },
+    { "label": "In-Progress", "value": "In-Progress", "active": true },
+    { "label": "Intake", "value": "Intake", "active": true },
+    { "label": "Investigation", "value": "Investigation", "active": true },
+    { "label": "Legal", "value": "Legal", "active": true },
+    { "label": "Pending Payment", "value": "Pending Payment", "active": true },
+    { "label": "Complete", "value": "Complete", "active": true },
+    { "label": "Closed", "value": "Closed", "active": true },
+    { "label": "Pending Submission", "value": "Pending Submission", "active": true },
+    { "label": "Received", "value": "Received", "active": true },
+    { "label": "Processing In Progress", "value": "Processing In Progress", "active": true },
+    { "label": "Records In Progress", "value": "Records In Progress", "active": true },
+    { "label": "Held", "value": "Held", "active": true },
+    { "label": "Approved", "value": "Approved", "active": true },
+    { "label": "Rejected", "value": "Rejected", "active": true },
+    { "label": "Completed", "value": "Completed", "active": true },
+    { "label": "Expired", "value": "Expired", "active": true },
+    { "label": "Withdrawn", "value": "Withdrawn", "active": true },
+    { "label": "Bounced Check", "value": "Bounced Check", "active": true }
+  ],
+  "originValues": [
+    { "label": "Phone", "value": "Phone", "active": true },
+    { "label": "Email", "value": "Email", "active": true },
+    { "label": "In Person", "value": "In Person", "active": true },
+    { "label": "Web", "value": "Web", "active": true },
+    { "label": "Data Load", "value": "Data Load", "active": true },
+    { "label": "State Provided", "value": "State Provided", "active": true },
+    { "label": "Fax", "value": "Fax", "active": true },
+    { "label": "Letter", "value": "Letter", "active": true },
+    { "label": "IVR call", "value": "IVR call", "active": true }
+  ]
+}
+
+

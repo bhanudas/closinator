@@ -1,0 +1,65 @@
+{
+  "org": "dcca-migration",
+  "queried": "2025-12-19",
+  "recordType": {
+    "name": "Call Center",
+    "developerName": "PVL",
+    "id": "012cs0000072Q7NAAU"
+  },
+  "statusDistribution": {
+    "New": 3123,
+    "InProgress": 227,
+    "In-Progress": 2,
+    "Closed": 131207
+  },
+  "newCasesAnalysis": {
+    "total": 3123,
+    "olderThan7Days": 3001,
+    "olderThan30Days": 2827,
+    "oldestCaseDate": "2022-05-12T23:58:01.000+0000",
+    "newestCaseDate": "2025-12-20T04:59:53.000+0000",
+    "percentOlderThan7Days": 96.1,
+    "percentOlderThan30Days": 90.5
+  },
+  "originDistribution": {
+    "null": 1449,
+    "IVR call": 1612,
+    "Outbound call": 58,
+    "Phone": 4
+  },
+  "incomingDivisionDistribution": {
+    "null": 2800,
+    "INS": 207,
+    "OCP": 61,
+    "PVL": 55
+  },
+  "ownerTypeDistribution": {
+    "User": 3123,
+    "Queue": 0
+  },
+  "classification": {
+    "transferCases": {
+      "total": 268,
+      "percentage": 8.6,
+      "description": "Cases with Incoming_Division__c = INS or OCP (routed from other divisions)"
+    },
+    "agentPickupCases": {
+      "total": 2855,
+      "percentage": 91.4,
+      "description": "Direct calls handled by Call Center agents"
+    }
+  },
+  "crossReference": [
+    { "incomingDivision": null, "origin": null, "count": 1448, "type": "Legacy Agent Pickup" },
+    { "incomingDivision": null, "origin": "IVR call", "count": 1291, "type": "Direct IVR Agent Pickup" },
+    { "incomingDivision": null, "origin": "Outbound call", "count": 58, "type": "Outbound Agent Pickup" },
+    { "incomingDivision": null, "origin": "Phone", "count": 3, "type": "Direct Phone Agent Pickup" },
+    { "incomingDivision": "INS", "origin": "IVR call", "count": 207, "type": "INS Division Transfer" },
+    { "incomingDivision": "OCP", "origin": null, "count": 1, "type": "OCP Transfer (manual)" },
+    { "incomingDivision": "OCP", "origin": "IVR call", "count": 60, "type": "OCP Division Transfer" },
+    { "incomingDivision": "PVL", "origin": "IVR call", "count": 54, "type": "PVL Direct Pickup" },
+    { "incomingDivision": "PVL", "origin": "Phone", "count": 1, "type": "PVL Direct Phone" }
+  ]
+}
+
+

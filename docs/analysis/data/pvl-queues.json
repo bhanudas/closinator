@@ -1,0 +1,27 @@
+{
+  "org": "dcca-migration",
+  "queried": "2025-12-19",
+  "queues": [
+    {
+      "Id": "00GSL0000051ZfB2AU",
+      "Name": "OCP - Tier 1 Agents",
+      "DeveloperName": "OCP_Tier_1_Agents",
+      "Type": "Queue"
+    },
+    {
+      "Id": "00GSL000005fClY2AU",
+      "Name": "PVL - Supervisors",
+      "DeveloperName": "PVL_Supervisors",
+      "Type": "Queue"
+    },
+    {
+      "Id": "00GSL0000051ZfC2AU",
+      "Name": "PVL - Tier 1",
+      "DeveloperName": "PVL_Tier_1_Agents",
+      "Type": "Queue"
+    }
+  ],
+  "note": "All 3,123 'New' Call Center cases are currently owned by Users, not Queues"
+}
+
+
