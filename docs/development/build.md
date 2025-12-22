@@ -22,7 +22,7 @@ The agent must use Salesforce CLI (`sf`) for all Salesforce development operatio
 
 #### DevHub Configuration
 
-**DevHub Alias:** `tnoxprod`
+**DevHub Alias:** `<to be provided>`
 
 The DevHub is already authenticated and available under this alias. All scratch org creation operations must reference this DevHub. Before beginning any work, verify the DevHub connection is active and valid. If the DevHub session has expired, re-authenticate before proceeding.
 
