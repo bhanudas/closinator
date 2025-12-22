@@ -46,3 +46,4 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
+docs/analysis/
