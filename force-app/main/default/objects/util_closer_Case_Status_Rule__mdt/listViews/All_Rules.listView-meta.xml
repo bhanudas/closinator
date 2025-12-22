@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>All_Rules</fullName>
+    <columns>MasterLabel</columns>
+    <columns>Is_Active__c</columns>
+    <columns>Execution_Order__c</columns>
+    <columns>Source_Status__c</columns>
+    <columns>Target_Status__c</columns>
+    <columns>Days_Since_Last_Modified__c</columns>
+    <columns>Days_Since_Created__c</columns>
+    <columns>Days_Since_Last_Activity__c</columns>
+    <columns>Stop_Processing__c</columns>
+    <columns>Description__c</columns>
+    <columns>DeveloperName</columns>
+    <filterScope>Everything</filterScope>
+    <label>All Rules</label>
+</ListView>

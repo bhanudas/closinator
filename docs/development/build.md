@@ -217,7 +217,7 @@ Each implementation phase should correspond to one or more feature branches. Onl
 
 1. Initialize SFDX project structure if not exists
 2. Create scratch org definition file
-3. Create scratch org from DevHub `tnoxprod`
+3. Create scratch org from DevHub `<instance to be provided>`
 4. Create Custom Setting object and fields
 5. Create Custom Metadata Type and fields
 6. Create sample Custom Metadata records

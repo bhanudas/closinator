@@ -612,7 +612,7 @@ npm run prettier
 
 ## License
 
-This project is proprietary and confidential.
+MIT
 
 ## Support
 
