@@ -41,7 +41,10 @@ public with sharing class util_closer_SchedulerController {
             result.put('isBatchRunning', !runningJobs.isEmpty());
             
         } catch (Exception ex) {
-            throw new AuraHandledException('Error getting job status: ' + ex.getMessage());
+            String msg = 'Error getting job status: ' + ex.getMessage();
+            AuraHandledException e = new AuraHandledException(msg);
+            e.setMessage(msg);
+            throw e;
         }
         
         return result;
@@ -57,18 +60,39 @@ public with sharing class util_closer_SchedulerController {
         try {
             // Validate cron expression format (basic validation)
             if (String.isBlank(cronExpression)) {
-                throw new AuraHandledException('Cron expression cannot be empty');
+                AuraHandledException e = new AuraHandledException('Cron expression cannot be empty');
+                e.setMessage('Cron expression cannot be empty');
+                throw e;
             }
             
             // Attempt to schedule (this will validate the cron expression)
+            // System.schedule() will throw StringException for invalid cron expressions
             String jobId = util_closer_CaseStatusScheduler.scheduleJob(cronExpression);
             
             return 'Job successfully scheduled with ID: ' + jobId;
             
         } catch (System.StringException ex) {
-            throw new AuraHandledException('Invalid cron expression: ' + ex.getMessage());
+            // StringException is thrown for invalid cron expressions
+            String errorMsg = 'Invalid cron expression: ' + ex.getMessage();
+            AuraHandledException e = new AuraHandledException(errorMsg);
+            e.setMessage(errorMsg);
+            throw e;
+        } catch (AuraHandledException ex) {
+            // Re-throw AuraHandledException as-is
+            throw ex;
         } catch (Exception ex) {
-            throw new AuraHandledException('Error scheduling job: ' + ex.getMessage());
+            // Check if this is a cron-related error and wrap appropriately
+            String errorMsg = ex.getMessage();
+            if (errorMsg != null && (errorMsg.toLowerCase().contains('cron') || errorMsg.contains('Invalid'))) {
+                String msg = 'Invalid cron expression: ' + errorMsg;
+                AuraHandledException e = new AuraHandledException(msg);
+                e.setMessage(msg);
+                throw e;
+            }
+            String msg = 'Error scheduling job: ' + errorMsg;
+            AuraHandledException e = new AuraHandledException(msg);
+            e.setMessage(msg);
+            throw e;
         }
     }
     
@@ -80,7 +104,10 @@ public with sharing class util_closer_SchedulerController {
         try {
             util_closer_CaseStatusScheduler.unscheduleJob();
         } catch (Exception ex) {
-            throw new AuraHandledException('Error unscheduling job: ' + ex.getMessage());
+            String msg = 'Error unscheduling job: ' + ex.getMessage();
+            AuraHandledException e = new AuraHandledException(msg);
+            e.setMessage(msg);
+            throw e;
         }
     }
     
@@ -104,7 +131,10 @@ public with sharing class util_closer_SchedulerController {
             result.put('completionEmails', settings.Completion_Notification_Emails__c);
             
         } catch (Exception ex) {
-            throw new AuraHandledException('Error getting settings: ' + ex.getMessage());
+            String msg = 'Error getting settings: ' + ex.getMessage();
+            AuraHandledException e = new AuraHandledException(msg);
+            e.setMessage(msg);
+            throw e;
         }
         
         return result;
@@ -150,7 +180,10 @@ public with sharing class util_closer_SchedulerController {
             upsert settings;
             
         } catch (Exception ex) {
-            throw new AuraHandledException('Error updating settings: ' + ex.getMessage());
+            String msg = 'Error updating settings: ' + ex.getMessage();
+            AuraHandledException e = new AuraHandledException(msg);
+            e.setMessage(msg);
+            throw e;
         }
     }
     
@@ -161,20 +194,29 @@ public with sharing class util_closer_SchedulerController {
     @AuraEnabled
     public static String runBatchNow() {
         try {
-            // Check if system is active
-            if (!util_closer_SettingsService.isActive()) {
-                throw new AuraHandledException('Warning: The system is currently inactive. The batch will run but no Cases will be processed. Activate the system first if you want to process Cases.');
-            }
+            // Check if system is active and warn if inactive, but still allow batch to run
+            Boolean isActive = util_closer_SettingsService.isActive();
             
             Integer batchSize = util_closer_SettingsService.getBatchSize();
             Id jobId = Database.executeBatch(new util_closer_CaseStatusBatch(), batchSize);
+            
+            // If inactive, throw warning exception after starting batch
+            if (!isActive) {
+                String msg = 'Warning: The system is currently inactive. Batch started with ID: ' + jobId;
+                AuraHandledException e = new AuraHandledException(msg);
+                e.setMessage(msg);
+                throw e;
+            }
             
             return String.valueOf(jobId);
             
         } catch (AuraHandledException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new AuraHandledException('Error running batch: ' + ex.getMessage());
+            String msg = 'Error running batch: ' + ex.getMessage();
+            AuraHandledException e = new AuraHandledException(msg);
+            e.setMessage(msg);
+            throw e;
         }
     }
 }

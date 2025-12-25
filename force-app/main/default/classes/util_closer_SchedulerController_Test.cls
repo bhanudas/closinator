@@ -224,17 +224,25 @@ private class util_closer_SchedulerController_Test {
         // Setup - use invalid cron expression that causes StringException
         Test.startTest();
         Boolean exceptionThrown = false;
+        String exceptionMessage = '';
         try {
             // Invalid cron expression that might cause StringException
             util_closer_SchedulerController.rescheduleJob('invalid cron');
         } catch (AuraHandledException ex) {
             exceptionThrown = true;
-            System.assert(ex.getMessage().contains('Invalid cron') || ex.getMessage().contains('Error'), 
-                'Should catch StringException and wrap in AuraHandledException');
+            exceptionMessage = ex.getMessage();
+            // AuraHandledException was caught - this is the expected behavior
         }
         Test.stopTest();
         
         System.assertEquals(true, exceptionThrown, 'Should throw exception for invalid cron');
+        // Verify exception message is set (using setMessage ensures getMessage works)
+        System.assertNotEquals(null, exceptionMessage, 
+            'Exception message should not be null');
+        System.assert(exceptionMessage.containsIgnoreCase('Invalid') || 
+                      exceptionMessage.containsIgnoreCase('cron') || 
+                      exceptionMessage.containsIgnoreCase('Error'), 
+            'Should catch StringException and wrap in AuraHandledException. Got: ' + exceptionMessage);
     }
     
     @isTest
@@ -300,16 +308,23 @@ private class util_closer_SchedulerController_Test {
         // Execute
         Test.startTest();
         Boolean exceptionThrown = false;
+        String exceptionMessage = '';
         try {
             String jobId = util_closer_SchedulerController.runBatchNow();
-            // Even if inactive, batch might still run (just won't process cases)
+            // If no exception, job started but might process nothing
             System.assertNotEquals(null, jobId, 'Should return job ID even if inactive');
         } catch (AuraHandledException ex) {
             exceptionThrown = true;
-            System.assert(ex.getMessage().contains('inactive') || ex.getMessage().contains('Warning'), 
-                'Should warn about inactive system');
+            exceptionMessage = ex.getMessage();
         }
         Test.stopTest();
+        
+        // The controller should throw an exception when system is inactive
+        System.assertEquals(true, exceptionThrown, 'Should throw exception when system is inactive');
+        System.assertNotEquals(null, exceptionMessage, 'Exception message should not be null');
+        System.assert(exceptionMessage.containsIgnoreCase('inactive') || 
+                      exceptionMessage.containsIgnoreCase('Warning'), 
+            'Should warn about inactive system. Got: ' + exceptionMessage);
         
         // Restore active state
         settings.Is_Active__c = true;
