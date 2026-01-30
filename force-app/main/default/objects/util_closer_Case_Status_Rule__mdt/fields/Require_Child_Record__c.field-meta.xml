@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Require_Child_Record__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When checked, the Case must have at least one matching child record for this rule to apply. When unchecked, Cases without any child records will also match if other criteria are met.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Check this if the Case must have at least one matching child record for the rule to apply.</inlineHelpText>
+    <label>Require Child Record</label>
+    <type>Checkbox</type>
+</CustomField>

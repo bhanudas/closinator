@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Child_Lookup_Field__c</fullName>
+    <description>API name of the lookup field on the child object that references the Case (e.g., UJET__Case__c or CaseId).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Enter the API name of the lookup field on the child object that links to Case.</inlineHelpText>
+    <label>Child Lookup Field</label>
+    <length>100</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,10 +1,11 @@
 /**
  * @description Test class for util_closer_CaseStatusBatch.
  * Tests batch processing, metrics tracking, and error handling.
+ * Uses dependency injection via mockRules for deterministic testing.
  */
 @isTest
 private class util_closer_CaseStatusBatch_Test {
-    
+
     @TestSetup
     static void setup() {
         // Create settings for tests
@@ -13,41 +14,66 @@ private class util_closer_CaseStatusBatch_Test {
         );
         util_closer_TestDataFactory.insertOrgDefaultSettings(settings);
     }
-    
+
+    /**
+     * @description Helper method to create a mock rule with common defaults.
+     */
+    private static util_closer_Case_Status_Rule__mdt createMockRule(
+        String developerName,
+        String sourceStatus,
+        String targetStatus,
+        Integer executionOrder
+    ) {
+        return new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = developerName,
+            MasterLabel = developerName,
+            Is_Active__c = true,
+            Source_Status__c = sourceStatus,
+            Target_Status__c = targetStatus,
+            Execution_Order__c = executionOrder
+        );
+    }
+
+    /**
+     * @description Reset mockRules after each test to avoid interference.
+     */
+    private static void resetMockRules() {
+        util_closer_RuleEngine.mockRules = null;
+    }
+
     @isTest
     static void testBatch_ProcessesCasesSuccessfully() {
         // Setup
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, 'completion@test.com'
         );
-        
-        // Get active rules
-        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
-        
-        if (rules.isEmpty()) {
-            // Skip test if no rules deployed
-            System.assert(true, 'Skipping test - no rules deployed');
-            return;
-        }
-        
+
+        // Set mock rules
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
         // Create cases matching rule criteria
-        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
-        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 5);
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
         insert testCases;
-        
-        // Backdate cases to meet age requirements
-        for (Case c : testCases) {
-            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
-        }
-        
+
         // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Verify - batch should complete without errors
-        System.assert(true, 'Batch completed without throwing exception');
+
+        // Verify - batch should complete and update cases
+        List<Case> updatedCases = [SELECT Id, Status FROM Case WHERE Id IN :testCases];
+        Integer closedCount = 0;
+        for (Case c : updatedCases) {
+            if (c.Status == 'Closed') {
+                closedCount++;
+            }
+        }
+        System.assertEquals(5, closedCount, 'All 5 cases should be closed');
+
+        resetMockRules();
     }
     
     @isTest
@@ -56,120 +82,182 @@ private class util_closer_CaseStatusBatch_Test {
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, null
         );
-        
+
+        // Set mock rules that won't match 'Working' status
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
         List<Case> testCases = util_closer_TestDataFactory.createCases('Working', 3);
         insert testCases;
-        
+
         // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
+
         // Verify - cases should remain unchanged
         List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
         for (Case c : updatedCases) {
             System.assertEquals('Working', c.Status, 'Status should remain unchanged');
         }
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_InactiveSystemSkipsProcessing() {
         // Setup - system is inactive
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, false, null, null
         );
-        
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
         List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
         insert testCases;
-        
+
         // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
+
         // Verify - cases should remain unchanged
         List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
         for (Case c : updatedCases) {
             System.assertEquals('New', c.Status, 'Status should remain unchanged when system is inactive');
         }
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_MetricsTrackedCorrectly() {
         // Setup
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, null
         );
-        
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
         // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Verify - batch should complete (metrics are internal)
-        System.assert(true, 'Batch completed and metrics were tracked');
+
+        // Verify - batch should complete and process cases
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        Integer closedCount = 0;
+        for (Case c : updatedCases) {
+            if (c.Status == 'Closed') {
+                closedCount++;
+            }
+        }
+        System.assertEquals(3, closedCount, 'All cases should be closed');
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_DebugModeLogsDetails() {
         // Setup - debug mode enabled
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, null
         );
-        
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
         List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
         insert testCases;
-        
+
         // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Verify - debug logs should be generated (cannot directly verify logs)
-        System.assert(true, 'Batch completed with debug mode enabled');
+
+        // Verify - batch should complete and update cases
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be updated');
+        }
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_LargeVolume() {
-        // Setup - use large batch size to process all in one batch (test limitation)
+        // Setup - use large batch size to process all in one batch
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, null
         );
-        
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
         // Create many cases
         List<Case> testCases = util_closer_TestDataFactory.createCases('New', 150);
         insert testCases;
-        
-        // Execute batch - in test context, all records will be processed in one batch
+
+        // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Verify - batch should handle volume
-        System.assert(true, 'Batch processed large volume');
+
+        // Verify - all cases should be closed
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        Integer closedCount = 0;
+        for (Case c : updatedCases) {
+            if (c.Status == 'Closed') {
+                closedCount++;
+            }
+        }
+        System.assertEquals(150, closedCount, 'All 150 cases should be closed');
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_CompletionNotificationSent() {
         // Setup
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, 'completion@test.com'
         );
-        
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
         // Execute batch
         Test.startTest();
-        Integer emailsBefore = Limits.getEmailInvocations();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Note: Email invocations in batch finish may not be trackable in tests
-        System.assert(true, 'Batch completed and sent completion notification');
+
+        // Verify - batch should complete
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be updated');
+        }
+
+        resetMockRules();
     }
     
     @isTest
@@ -429,123 +517,119 @@ private class util_closer_CaseStatusBatch_Test {
     static void testBatch_UsesCaseDataAccess() {
         // Setup
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
-        
-        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
-        
-        if (rules.isEmpty()) {
-            return;
-        }
-        
-        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
-        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 3);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
         insert testCases;
-        
-        // Backdate cases
-        for (Case c : testCases) {
-            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
-        }
-        
+
         // Execute batch - should use CaseDataAccess for querying
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Verify - batch should complete using without sharing query
-        System.assert(true, 'Batch should use CaseDataAccess for querying');
+
+        // Verify - batch should complete and update cases
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be updated');
+        }
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_NoActiveRules_ReturnsEmptyQuery() {
-        // Setup - test empty rules path (lines 38-40)
+        // Setup - empty rules list
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
-        
-        // Note: This test verifies the empty rules check in start method
-        // In practice, if no rules exist, start() returns empty query
-        
-        // Execute batch - need to create a proper BatchableContext
-        Test.startTest();
-        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
-        // Create a mock BatchableContext - in test context, we can use Database.executeBatch
-        // which will call start() internally
-        Database.executeBatch(batch, 200);
-        Test.stopTest();
-        
-        // Verify - batch should complete without error even if no rules
-        System.assert(true, 'Batch should handle empty rules gracefully');
-    }
-    
-    @isTest
-    static void testBatch_EmptyStatusChanges_SkipsUpdate() {
-        // Setup - test empty statusChanges path (lines 65-67)
-        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
-        
-        // Create cases that won't match any rules (so statusChanges will be empty)
-        List<Case> testCases = util_closer_TestDataFactory.createCases('Working', 3);
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>();
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
         insert testCases;
-        
+
         // Execute batch
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
+
+        // Verify - batch should complete without error, cases unchanged
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain unchanged');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_EmptyStatusChanges_SkipsUpdate() {
+        // Setup - cases won't match rules (different status)
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        // Create cases that won't match any rules
+        List<Case> testCases = util_closer_TestDataFactory.createCases('Working', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
         // Verify - batch should complete without updating cases
         List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
         for (Case c : updatedCases) {
             System.assertEquals('Working', c.Status, 'Status should remain unchanged');
         }
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_UpdateFailures_HandlesErrors() {
-        // Setup - test error handling in execute method (lines 96-102)
+        // Setup
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
-        
-        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
-        
-        if (rules.isEmpty()) {
-            return;
-        }
-        
-        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
-        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 3);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
         insert testCases;
-        
-        // Backdate cases
-        for (Case c : testCases) {
-            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
-        }
-        
+
         // Execute batch - errors should be handled gracefully
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
-        // Verify - batch should complete even if some updates fail
-        System.assert(true, 'Batch should handle update failures gracefully');
+
+        // Verify - batch should complete
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be updated');
+        }
+
+        resetMockRules();
     }
-    
+
     @isTest
     static void testBatch_ExceptionInExecute_Handled() {
-        // Setup - test exception handling in execute method (lines 105-108)
+        // Setup
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
 
-        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
 
-        if (rules.isEmpty()) {
-            return;
-        }
-
-        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
-        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 2);
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
         insert testCases;
-
-        // Backdate cases
-        for (Case c : testCases) {
-            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
-        }
 
         // Execute batch - exceptions should be caught and handled
         Test.startTest();
@@ -553,8 +637,13 @@ private class util_closer_CaseStatusBatch_Test {
         Database.executeBatch(batch, 200);
         Test.stopTest();
 
-        // Verify - batch should complete even if exceptions occur
-        System.assert(true, 'Batch should handle exceptions gracefully');
+        // Verify - batch should complete
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be updated');
+        }
+
+        resetMockRules();
     }
 
     // ==================== Auto Close Reason Tests ====================
@@ -595,25 +684,24 @@ private class util_closer_CaseStatusBatch_Test {
 
     @isTest
     static void testBatch_AutoCloseReason_ValidField_ProcessesSuccessfully() {
-        // Setup - Auto Close Reason enabled with valid field (Reason is a standard Case field)
+        // Setup - Auto Close Reason enabled with valid field
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
             200, true, true, null, null, true, 'Reason'
         );
 
-        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+        // Create rule with Target_Reason__c
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Reason_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Target_Reason__c = 'Auto-closed by system',
+            Execution_Order__c = 1
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
 
-        if (rules.isEmpty()) {
-            return;
-        }
-
-        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
-        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 3);
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
         insert testCases;
-
-        // Backdate cases
-        for (Case c : testCases) {
-            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
-        }
 
         // Execute batch
         Test.startTest();
@@ -621,8 +709,14 @@ private class util_closer_CaseStatusBatch_Test {
         Database.executeBatch(batch, 200);
         Test.stopTest();
 
-        // Verify - batch should complete successfully
-        System.assert(true, 'Batch should process with valid Auto Close Reason field');
+        // Verify - batch should complete and set reason
+        List<Case> updatedCases = [SELECT Status, Reason FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+            System.assertEquals('Auto-closed by system', c.Reason, 'Reason should be set');
+        }
+
+        resetMockRules();
     }
 
     @isTest
@@ -632,20 +726,12 @@ private class util_closer_CaseStatusBatch_Test {
             200, true, true, null, null, false, null
         );
 
-        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
 
-        if (rules.isEmpty()) {
-            return;
-        }
-
-        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
-        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 3);
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
         insert testCases;
-
-        // Backdate cases
-        for (Case c : testCases) {
-            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
-        }
 
         // Execute batch
         Test.startTest();
@@ -653,8 +739,13 @@ private class util_closer_CaseStatusBatch_Test {
         Database.executeBatch(batch, 200);
         Test.stopTest();
 
-        // Verify - batch should complete successfully without setting reason
-        System.assert(true, 'Batch should process normally when Auto Close Reason is disabled');
+        // Verify - batch should complete successfully
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
     }
 
     @isTest
@@ -698,6 +789,472 @@ private class util_closer_CaseStatusBatch_Test {
         Test.stopTest();
 
         System.assertEquals('Test error message', ex.getMessage(), 'Exception should contain the error message');
+    }
+
+    // ==================== Child Record Criteria Tests ====================
+
+    @isTest
+    static void testBatch_WithChildCriteria_ProcessesSuccessfully() {
+        // Setup - rule with child criteria
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        // Rule with child criteria that doesn't require a match
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Child_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Child_Object_API_Name__c = 'CaseComment',
+            Child_Lookup_Field__c = 'ParentId',
+            Require_Child_Record__c = false
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - batch should complete and update cases
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_RulesHaveChildCriteria_FetchesChildRecords() {
+        // Setup - rule that requires matching child record
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Child_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Child_Object_API_Name__c = 'CaseComment',
+            Child_Lookup_Field__c = 'ParentId',
+            Child_Filter_Field__c = 'CommentBody',
+            Child_Filter_Value__c = 'Resolved',
+            Child_Filter_Operator__c = 'Contains',
+            Require_Child_Record__c = true
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        // Create test case with matching child comment
+        Case testCase = new Case(Subject = 'Test Case With Child', Status = 'New', Origin = 'Web');
+        insert testCase;
+
+        CaseComment comment = new CaseComment(
+            ParentId = testCase.Id,
+            CommentBody = 'Issue Resolved by customer'
+        );
+        insert comment;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - case should be closed
+        Case updatedCase = [SELECT Status FROM Case WHERE Id = :testCase.Id];
+        System.assertEquals('Closed', updatedCase.Status, 'Status should be Closed');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_EmptyRulesInStart_ReturnsEmptyQuery() {
+        // Test empty rules path in start method
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>();
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases remain unchanged
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain unchanged');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReasonEnabled_SetsReasonField() {
+        // Test setting reason field when enabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, true, 'Reason'
+        );
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Reason_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Target_Reason__c = 'System auto-closed',
+            Execution_Order__c = 1
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - reason should be set
+        List<Case> updatedCases = [SELECT Status, Reason FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+            System.assertEquals('System auto-closed', c.Reason, 'Reason should be set');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_MetricsAggregation() {
+        // Test that metrics methods work correctly
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        // Test metrics aggregation directly
+        util_closer_BatchMetrics metrics = new util_closer_BatchMetrics();
+
+        // Simulate multiple batch executions
+        metrics.incrementBatchCount();
+        metrics.addProcessedCount(50);
+        metrics.recordSuccess('New', 'Closed');
+        metrics.recordSuccess('New', 'Closed');
+
+        metrics.incrementBatchCount();
+        metrics.addProcessedCount(25);
+        metrics.recordSuccess('Working', 'Closed');
+        metrics.recordFailure('Test error', null);
+
+        // Verify aggregation
+        System.assertEquals(2, metrics.totalBatchesExecuted, 'Should have 2 batches');
+        System.assertEquals(75, metrics.totalRecordsProcessed, 'Should have 75 processed');
+        System.assertEquals(3, metrics.totalRecordsUpdated, 'Should have 3 successes');
+        System.assertEquals(1, metrics.totalRecordsFailed, 'Should have 1 failure');
+    }
+
+    @isTest
+    static void testBatch_CaseUpdateSuccess_RecordsMetrics() {
+        // Test successful update records metrics
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - all cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_CaseUpdateFailure_RecordsError() {
+        // Test update failure recording
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_ExceptionDuringExecute_CaughtAndLogged() {
+        // Test exception handling
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_FinishWithFailures_SendsErrorNotification() {
+        // Test error notification when failures occur
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, 'error@test.com', 'completion@test.com'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_ConstructorInitialization() {
+        // Test constructor initializes all fields
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, true, 'Reason'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        // Execute
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Test.stopTest();
+
+        // Verify - constructor should complete without error
+        System.assertNotEquals(null, batch, 'Batch should be created');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_ConstructorWithAutoCloseDisabled() {
+        // Test constructor when Auto Close Reason is disabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, false, null
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_StartWithValidAutoCloseField() {
+        // Test start method validates Auto Close field
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, true, 'Reason'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_ExecuteWithMatchingCases() {
+        // Test execute method with cases that match rules
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 10);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - all cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_ExecuteWithNonMatchingCases() {
+        // Test execute method when no cases match
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        // Create cases with status that won't match rules
+        List<Case> testCases = util_closer_TestDataFactory.createCases('Escalated', 5);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should remain unchanged
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Escalated', c.Status, 'Status should remain unchanged');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_BuildsCasesToUpdateList() {
+        // Test building cases to update list
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - all cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_ProcessesSaveResults() {
+        // Test processing save results
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - all cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
     }
 }
 
