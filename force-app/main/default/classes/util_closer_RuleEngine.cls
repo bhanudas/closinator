@@ -122,6 +122,7 @@ public with sharing class util_closer_RuleEngine {
      * @param rule The rule to match against.
      * @return True if the case matches the rule.
      */
+    @TestVisible
     private static Boolean caseMatchesRule(Case c, util_closer_Case_Status_Rule__mdt rule) {
         // Check source status
         Set<String> sourceStatuses = parseStatusList(rule.Source_Status__c);
@@ -206,6 +207,7 @@ public with sharing class util_closer_RuleEngine {
      * @param listString The string to parse.
      * @return Set of trimmed values.
      */
+    @TestVisible
     private static Set<String> parseList(String listString) {
         Set<String> values = new Set<String>();
         if (String.isNotBlank(listString)) {
@@ -224,6 +226,7 @@ public with sharing class util_closer_RuleEngine {
      * @param dt The datetime to compare.
      * @return Number of days since the datetime.
      */
+    @TestVisible
     private static Integer getDaysSince(DateTime dt) {
         if (dt == null) {
             return 0;
