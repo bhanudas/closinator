@@ -3,7 +3,16 @@
  * Provides methods for job scheduling, settings management, and batch execution.
  */
 public with sharing class util_closer_SchedulerController {
-    
+
+    @TestVisible
+    private static Boolean throwExceptionOnGetJobStatus = false;
+    @TestVisible
+    private static Boolean throwExceptionOnGetSettings = false;
+    @TestVisible
+    private static Boolean throwExceptionOnUnschedule = false;
+    @TestVisible
+    private static Boolean throwExceptionOnRunBatch = false;
+
     /**
      * @description Gets the current job status and details.
      * @return Map containing job status information.
@@ -13,6 +22,9 @@ public with sharing class util_closer_SchedulerController {
         Map<String, Object> result = new Map<String, Object>();
         
         try {
+            if (throwExceptionOnGetJobStatus) {
+                throw new CalloutException('Test exception for getJobStatus');
+            }
             CronTrigger jobInfo = util_closer_CaseStatusScheduler.getScheduledJobInfo();
             
             if (jobInfo != null) {
@@ -102,6 +114,9 @@ public with sharing class util_closer_SchedulerController {
     @AuraEnabled
     public static void unscheduleJob() {
         try {
+            if (throwExceptionOnUnschedule) {
+                throw new CalloutException('Test exception for unscheduleJob');
+            }
             util_closer_CaseStatusScheduler.unscheduleJob();
         } catch (Exception ex) {
             String msg = 'Error unscheduling job: ' + ex.getMessage();
@@ -120,6 +135,9 @@ public with sharing class util_closer_SchedulerController {
         Map<String, Object> result = new Map<String, Object>();
         
         try {
+            if (throwExceptionOnGetSettings) {
+                throw new CalloutException('Test exception for getSettings');
+            }
             util_closer_Settings__c settings = util_closer_SettingsService.getSettings();
             
             result.put('batchSize', settings.Batch_Size__c);
@@ -194,6 +212,9 @@ public with sharing class util_closer_SchedulerController {
     @AuraEnabled
     public static String runBatchNow() {
         try {
+            if (throwExceptionOnRunBatch) {
+                throw new CalloutException('Test exception for runBatchNow');
+            }
             // Check if system is active and warn if inactive, but still allow batch to run
             Boolean isActive = util_closer_SettingsService.isActive();
             
