@@ -1551,5 +1551,544 @@ private class util_closer_RuleEngine_Test {
 
         resetMockRules();
     }
+
+    // ==================== Origin Filter Tests ====================
+
+    @isTest
+    static void testEvaluateCases_WithOriginFilter_Match() {
+        // Test Origin filter matches
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin FROM Case WHERE Id = :testCase.Id];
+
+        // Create rule with Origin filter
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Origin_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Origins__c = 'Web;Phone'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match because Origin is in the list
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_WithOriginFilter_NoMatch() {
+        // Test Origin filter does not match
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Email');
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin FROM Case WHERE Id = :testCase.Id];
+
+        // Create rule with Origin filter that doesn't include Email
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Origin_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Origins__c = 'Web;Phone'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should NOT match because Origin is not in the list
+        System.assertEquals(0, changes.size(), 'Should have 0 changes');
+
+        resetMockRules();
+    }
+
+    // ==================== Owner Name Like Filter Tests ====================
+
+    @isTest
+    static void testEvaluateCases_WithOwnerNameLike_Match() {
+        // Test Owner Name Like filter matches using wildcard
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web', OwnerId = UserInfo.getUserId());
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, OwnerId, Owner.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Skip if owner name is not accessible (e.g., assignment rules or permissions)
+        String ownerName = testCase.Owner != null ? testCase.Owner.Name : null;
+        if (String.isBlank(ownerName)) {
+            System.assert(true, 'Skipping - owner name not accessible');
+            return;
+        }
+
+        // Create rule with Owner Name Like filter - use wildcard to match any name
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Owner_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Owner_Name_Like__c = '%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match because wildcard matches any name
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_WithOwnerNameLike_NoMatch() {
+        // Test Owner Name Like filter does not match
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, Owner.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Create rule with Owner Name Like filter that won't match
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Owner_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Owner_Name_Like__c = '%NonExistentName%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should NOT match
+        System.assertEquals(0, changes.size(), 'Should have 0 changes');
+
+        resetMockRules();
+    }
+
+    // ==================== Last Modified By Name Like Filter Tests ====================
+
+    @isTest
+    static void testEvaluateCases_WithLastModifiedByNameLike_Match() {
+        // Test Last Modified By Name Like filter matches
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, LastModifiedBy.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Create rule with Last Modified By Name Like filter - match any (wildcard)
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'LastModBy_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Last_Modified_By_Name_Like__c = '%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match because wildcard matches any name
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_WithLastModifiedByNameLike_NoMatch() {
+        // Test Last Modified By Name Like filter does not match
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, LastModifiedBy.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Create rule with Last Modified By Name Like filter that won't match
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'LastModBy_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Last_Modified_By_Name_Like__c = '%NonExistentName%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should NOT match
+        System.assertEquals(0, changes.size(), 'Should have 0 changes');
+
+        resetMockRules();
+    }
+
+    // ==================== matchesLikePattern Tests ====================
+
+    @isTest
+    static void testMatchesLikePattern_StartsWith() {
+        // Test LIKE pattern with trailing wildcard - directly test the helper method
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        // Test the matchesLikePattern method directly via case evaluation
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web', OwnerId = UserInfo.getUserId());
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, Owner.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Get the actual owner name from the case and build a pattern
+        String actualOwnerName = testCase.Owner != null ? testCase.Owner.Name : null;
+
+        // Skip test if owner name is not available (e.g., Queue owner)
+        if (String.isBlank(actualOwnerName)) {
+            System.assert(true, 'Skipping - owner name not available');
+            return;
+        }
+
+        // Build pattern from first char of actual owner name
+        String startPattern = actualOwnerName.substring(0, 1) + '%';
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'StartsWith_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Owner_Name_Like__c = startPattern
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match since pattern is built from actual name
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testMatchesLikePattern_Contains() {
+        // Test LIKE pattern with wildcards on both sides
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web', OwnerId = UserInfo.getUserId());
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, Owner.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Get the actual owner name from the case
+        String actualOwnerName = testCase.Owner != null ? testCase.Owner.Name : null;
+
+        // Skip test if owner name is not available
+        if (String.isBlank(actualOwnerName)) {
+            System.assert(true, 'Skipping - owner name not available');
+            return;
+        }
+
+        // Use first character with contains pattern
+        String containsPattern = '%' + actualOwnerName.substring(0, 1) + '%';
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Contains_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Owner_Name_Like__c = containsPattern
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testMatchesLikePattern_SingleCharWildcard() {
+        // Test LIKE pattern with single char wildcard (_)
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web', OwnerId = UserInfo.getUserId());
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, Owner.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Get the actual owner name from the case
+        String actualOwnerName = testCase.Owner != null ? testCase.Owner.Name : null;
+
+        // Skip test if owner name is not available or too short
+        if (String.isBlank(actualOwnerName) || actualOwnerName.length() < 2) {
+            System.assert(true, 'Skipping - owner name not available or too short');
+            return;
+        }
+
+        // Pattern: first char + single char wildcard + rest matches anything
+        String singleCharPattern = actualOwnerName.substring(0, 1) + '_%';
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'SingleChar_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Owner_Name_Like__c = singleCharPattern
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_CombinedFilters() {
+        // Test combining Origin, Owner Name Like, and Last Modified By Name Like filters
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web', OwnerId = UserInfo.getUserId());
+        insert testCase;
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate, Origin, OwnerId, Owner.Name, LastModifiedBy.Name FROM Case WHERE Id = :testCase.Id];
+
+        // Skip if owner name is not accessible
+        String ownerName = testCase.Owner != null ? testCase.Owner.Name : null;
+        if (String.isBlank(ownerName)) {
+            System.assert(true, 'Skipping - owner name not accessible');
+            return;
+        }
+
+        // Create rule with all three filters - use wildcards for name fields
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Combined_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Origins__c = 'Web;Phone',
+            Owner_Name_Like__c = '%',
+            Last_Modified_By_Name_Like__c = '%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should match all filters
+        System.assertEquals(1, changes.size(), 'Should have 1 change');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_OriginNotQueried() {
+        // Test when Origin field is not queried
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        // Deliberately don't query Origin
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate FROM Case WHERE Id = :testCase.Id];
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Origin_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Origins__c = 'Web'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute - should handle gracefully
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should handle missing field gracefully
+        System.assertNotEquals(null, changes, 'Changes should not be null');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_OwnerNotQueried() {
+        // Test when Owner relationship is not queried
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        // Deliberately don't query Owner.Name
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate FROM Case WHERE Id = :testCase.Id];
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Owner_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Owner_Name_Like__c = '%Test%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute - should handle gracefully
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should handle missing field gracefully
+        System.assertNotEquals(null, changes, 'Changes should not be null');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testEvaluateCases_LastModifiedByNotQueried() {
+        // Test when LastModifiedBy relationship is not queried
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        Case testCase = new Case(Subject = 'Test Case', Status = 'New', Origin = 'Web');
+        insert testCase;
+        // Deliberately don't query LastModifiedBy.Name
+        testCase = [SELECT Id, Status, LastModifiedDate, CreatedDate FROM Case WHERE Id = :testCase.Id];
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'LastModBy_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Last_Modified_By_Name_Like__c = '%Test%'
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        // Execute - should handle gracefully
+        Test.startTest();
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(
+            new List<Case>{ testCase },
+            rules,
+            null
+        );
+        Test.stopTest();
+
+        // Verify - should handle missing field gracefully
+        System.assertNotEquals(null, changes, 'Changes should not be null');
+
+        resetMockRules();
+    }
 }
 

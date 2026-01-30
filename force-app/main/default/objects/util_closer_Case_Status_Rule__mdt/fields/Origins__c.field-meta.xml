@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Origins__c</fullName>
+    <description>Semicolon-separated list of Case Origins to match. Leave blank to match all origins. Example: IVR Call;Web;Email</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Enter one or more Case Origin values separated by semicolons. The rule will only match Cases with one of these origins. Leave blank to match all origins.</inlineHelpText>
+    <label>Origins</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

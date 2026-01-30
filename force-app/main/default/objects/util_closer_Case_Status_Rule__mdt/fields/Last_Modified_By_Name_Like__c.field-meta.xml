@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Last_Modified_By_Name_Like__c</fullName>
+    <description>Pattern to match against Last Modified By Name using LIKE operator. Supports % as wildcard. Example: %Google% matches names containing Google.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Enter a pattern to match the Last Modified By Name. Use % as wildcard. Example: %Google% matches any name containing Google.</inlineHelpText>
+    <label>Last Modified By Name Like</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
