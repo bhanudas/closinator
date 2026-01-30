@@ -9,6 +9,7 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
     private Set<String> sourceStatuses;
     private Boolean autoCloseReasonEnabled;
     private String autoCloseReasonField;
+    private Boolean simulationMode;
 
     /**
      * @description Constructor initializes metrics and loads rules.
@@ -19,7 +20,11 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
         this.sourceStatuses = util_closer_RuleEngine.getAllSourceStatuses();
         this.autoCloseReasonEnabled = util_closer_SettingsService.isAutoCloseReasonEnabled();
         this.autoCloseReasonField = util_closer_SettingsService.getAutoCloseReasonField();
+        this.simulationMode = util_closer_SettingsService.isSimulationMode();
         util_closer_Logger.debug('CaseStatusBatch', 'Batch initialized with ' + this.rules.size() + ' active rules');
+        if (this.simulationMode) {
+            util_closer_Logger.debug('CaseStatusBatch', '*** SIMULATION MODE ENABLED - No records will be updated ***');
+        }
         if (this.autoCloseReasonEnabled) {
             util_closer_Logger.debug('CaseStatusBatch', 'Auto Close Reason enabled, target field: ' + this.autoCloseReasonField);
         }
@@ -164,7 +169,27 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
                 }
             }
 
-            // Perform update with partial success
+            // SIMULATION MODE: Log what would happen but don't update
+            if (this.simulationMode) {
+                util_closer_Logger.debug('CaseStatusBatch', '*** SIMULATION: Would update ' + casesToUpdate.size() + ' Cases ***');
+                for (Case c : casesToUpdate) {
+                    String originalStatus = originalStatuses.get(c.Id);
+                    String reasonInfo = '';
+                    if (this.autoCloseReasonEnabled && this.autoCloseReasonField != null) {
+                        Object reasonValue = c.get(this.autoCloseReasonField);
+                        if (reasonValue != null) {
+                            reasonInfo = ', Reason: ' + String.valueOf(reasonValue);
+                        }
+                    }
+                    util_closer_Logger.debug('CaseStatusBatch',
+                        '[SIMULATION] Case ' + c.Id + ': ' + originalStatus + ' -> ' + c.Status + reasonInfo);
+                    // Record as "simulated success" for metrics
+                    this.metrics.recordSuccess(originalStatus, c.Status);
+                }
+                return;
+            }
+
+            // Perform update with partial success (only if NOT in simulation mode)
             Database.SaveResult[] saveResults = Database.update(casesToUpdate, false);
 
             // Process results
@@ -197,15 +222,27 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
      */
     public void finish(Database.BatchableContext bc) {
         this.metrics.endTime = DateTime.now();
-        
-        util_closer_Logger.debug('CaseStatusBatch', 'Batch job completed: ' + bc.getJobId());
+
+        String modeIndicator = this.simulationMode ? ' [SIMULATION MODE]' : '';
+        util_closer_Logger.debug('CaseStatusBatch', 'Batch job completed' + modeIndicator + ': ' + bc.getJobId());
+
+        if (this.simulationMode) {
+            util_closer_Logger.debug('CaseStatusBatch', '*** SIMULATION COMPLETE - No records were actually updated ***');
+            util_closer_Logger.debug('CaseStatusBatch', 'Cases that WOULD have been updated: ' + this.metrics.totalRecordsUpdated);
+        }
+
         util_closer_Logger.debug('CaseStatusBatch', this.metrics.toLogSummary());
-        
+
+        // Mark metrics as simulation if applicable
+        if (this.simulationMode) {
+            this.metrics.simulationMode = true;
+        }
+
         // Send completion report
         util_closer_NotificationService.sendCompletionReport(this.metrics);
-        
-        // Send error notification if failures occurred
-        if (this.metrics.totalRecordsFailed > 0) {
+
+        // Send error notification if failures occurred (not applicable in simulation mode)
+        if (!this.simulationMode && this.metrics.totalRecordsFailed > 0) {
             util_closer_NotificationService.sendErrorNotification(
                 'Batch Job Completed with Errors',
                 'The batch job completed with ' + this.metrics.totalRecordsFailed + ' failures.',

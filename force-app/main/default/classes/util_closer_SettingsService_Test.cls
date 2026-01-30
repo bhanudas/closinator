@@ -394,5 +394,56 @@ private class util_closer_SettingsService_Test {
         // Verify
         System.assertEquals(null, fieldName, 'Whitespace only should return null');
     }
+
+    // ==================== Simulation Mode Tests ====================
+
+    @isTest
+    static void testIsSimulationMode_True() {
+        // Setup - simulation mode enabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, false, true, null, null, false, null, true
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isSimulation = util_closer_SettingsService.isSimulationMode();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(true, isSimulation, 'Simulation mode should be enabled');
+    }
+
+    @isTest
+    static void testIsSimulationMode_False() {
+        // Setup - simulation mode disabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, false, true, null, null, false, null, false
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isSimulation = util_closer_SettingsService.isSimulationMode();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isSimulation, 'Simulation mode should be disabled');
+    }
+
+    @isTest
+    static void testIsSimulationMode_Null() {
+        // Setup - null simulation mode should return false
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Simulation_Mode__c = null
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isSimulation = util_closer_SettingsService.isSimulationMode();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isSimulation, 'Null simulation mode should return false');
+    }
 }
 
