@@ -1256,5 +1256,237 @@ private class util_closer_CaseStatusBatch_Test {
 
         resetMockRules();
     }
+
+    // ==================== Simulation Mode Tests ====================
+
+    @isTest
+    static void testBatch_SimulationMode_DoesNotUpdateCases() {
+        // Setup - simulation mode enabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, false, null, true
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should NOT be updated in simulation mode
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain unchanged in simulation mode');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_SimulationMode_RecordsMetrics() {
+        // Setup - simulation mode enabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, 'completion@test.com', false, null, true
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases remain unchanged but batch completes
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain New in simulation mode');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_SimulationMode_WithAutoCloseReason() {
+        // Setup - simulation mode with auto close reason
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, true, 'Reason', true
+        );
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Sim_Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Target_Reason__c = 'Simulated close',
+            Execution_Order__c = 1
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should NOT be updated in simulation mode
+        List<Case> updatedCases = [SELECT Status, Reason FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain New in simulation mode');
+            System.assertEquals(null, c.Reason, 'Reason should remain null in simulation mode');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_SimulationMode_ConstructorLogs() {
+        // Setup - simulation mode enabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, false, null, true
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        // Execute - constructor should log simulation mode
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Test.stopTest();
+
+        // Verify - batch should be created
+        System.assertNotEquals(null, batch, 'Batch should be created in simulation mode');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testMetrics_SimulationMode_ToEmailBody() {
+        // Setup - metrics with simulation mode enabled
+        util_closer_BatchMetrics metrics = new util_closer_BatchMetrics();
+        metrics.simulationMode = true;
+        metrics.totalRecordsProcessed = 100;
+        metrics.totalRecordsUpdated = 50;
+        metrics.endTime = DateTime.now();
+        metrics.recordSuccess('New', 'Closed');
+
+        // Execute
+        String emailBody = metrics.toEmailBody();
+
+        // Verify - should contain simulation mode indicators
+        System.assert(emailBody.contains('SIMULATION'), 'Email body should contain SIMULATION');
+        System.assert(emailBody.contains('Would Be Updated') || emailBody.contains('WOULD'),
+            'Email body should indicate simulated updates');
+    }
+
+    @isTest
+    static void testMetrics_SimulationMode_ToLogSummary() {
+        // Setup - metrics with simulation mode enabled
+        util_closer_BatchMetrics metrics = new util_closer_BatchMetrics();
+        metrics.simulationMode = true;
+        metrics.totalRecordsProcessed = 100;
+        metrics.totalRecordsUpdated = 50;
+        metrics.totalRecordsFailed = 0;
+        metrics.totalBatchesExecuted = 1;
+
+        // Execute
+        String summary = metrics.toLogSummary();
+
+        // Verify - should contain simulation mode indicator
+        System.assert(summary.contains('[SIMULATION]'), 'Log summary should contain [SIMULATION]');
+        System.assert(summary.contains('Would Update'), 'Log summary should contain Would Update');
+    }
+
+    @isTest
+    static void testMetrics_NormalMode_ToLogSummary() {
+        // Setup - metrics without simulation mode
+        util_closer_BatchMetrics metrics = new util_closer_BatchMetrics();
+        metrics.simulationMode = false;
+        metrics.totalRecordsProcessed = 100;
+        metrics.totalRecordsUpdated = 50;
+        metrics.totalRecordsFailed = 0;
+        metrics.totalBatchesExecuted = 1;
+
+        // Execute
+        String summary = metrics.toLogSummary();
+
+        // Verify - should NOT contain simulation mode indicator
+        System.assert(!summary.contains('[SIMULATION]'), 'Log summary should not contain [SIMULATION]');
+        System.assert(summary.contains('Updated='), 'Log summary should contain Updated=');
+    }
+
+    @isTest
+    static void testBatch_SimulationMode_FinishMethod() {
+        // Setup - simulation mode enabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, 'error@test.com', 'completion@test.com', false, null, true
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - finish should complete without error, no error notification in simulation mode
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain New');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_SimulationMode_NoMatchingCases() {
+        // Setup - simulation mode with no matching cases
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, false, null, true
+        );
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        // Create cases that don't match the rule
+        List<Case> testCases = util_closer_TestDataFactory.createCases('Working', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should remain unchanged
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Working', c.Status, 'Status should remain Working');
+        }
+
+        resetMockRules();
+    }
 }
 

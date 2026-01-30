@@ -109,6 +109,15 @@ public with sharing class util_closer_SettingsService {
     }
 
     /**
+     * @description Returns whether simulation mode is enabled.
+     * When enabled, the batch evaluates rules and logs changes but does NOT update records.
+     * @return True if simulation mode is enabled.
+     */
+    public static Boolean isSimulationMode() {
+        return getSettings().Simulation_Mode__c == true;
+    }
+
+    /**
      * @description Clears the cached settings. Useful for testing.
      */
     @TestVisible

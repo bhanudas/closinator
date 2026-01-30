@@ -14,7 +14,8 @@ public with sharing class util_closer_BatchMetrics {
     public DateTime endTime { get; set; }
     public List<String> errors { get; set; }
     public Map<String, Integer> statusTransitionCounts { get; set; }
-    
+    public Boolean simulationMode { get; set; }
+
     /**
      * @description Constructor initializes all metrics to zero/empty.
      */
@@ -26,6 +27,7 @@ public with sharing class util_closer_BatchMetrics {
         this.startTime = DateTime.now();
         this.errors = new List<String>();
         this.statusTransitionCounts = new Map<String, Integer>();
+        this.simulationMode = false;
     }
     
     /**
@@ -72,19 +74,31 @@ public with sharing class util_closer_BatchMetrics {
      * @return HTML formatted metrics.
      */
     public String toEmailBody() {
-        Long durationMs = this.endTime != null 
-            ? this.endTime.getTime() - this.startTime.getTime() 
+        Long durationMs = this.endTime != null
+            ? this.endTime.getTime() - this.startTime.getTime()
             : 0;
-        
+
         String html = '<html><body>';
-        html += '<h2>Case Status Auto-Closer - Batch Completion Report</h2>';
+
+        // Show prominent simulation mode banner if applicable
+        if (this.simulationMode) {
+            html += '<div style="background-color: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin-bottom: 15px; border-radius: 5px;">';
+            html += '<h2 style="color: #856404; margin: 0;">⚠️ SIMULATION MODE - No Records Were Updated</h2>';
+            html += '<p style="color: #856404; margin: 5px 0 0 0;">This report shows what WOULD have happened if the batch ran in normal mode.</p>';
+            html += '</div>';
+        }
+
+        html += '<h2>Case Status Auto-Closer - Batch Completion Report' + (this.simulationMode ? ' (SIMULATION)' : '') + '</h2>';
         html += '<table border="1" cellpadding="5" cellspacing="0">';
+        if (this.simulationMode) {
+            html += '<tr style="background-color: #fff3cd;"><td><strong>Mode</strong></td><td><strong>SIMULATION (Dry Run)</strong></td></tr>';
+        }
         html += '<tr><td><strong>Start Time</strong></td><td>' + this.startTime.format('yyyy-MM-dd HH:mm:ss') + '</td></tr>';
         html += '<tr><td><strong>End Time</strong></td><td>' + (this.endTime != null ? this.endTime.format('yyyy-MM-dd HH:mm:ss') : 'N/A') + '</td></tr>';
         html += '<tr><td><strong>Duration</strong></td><td>' + formatDuration(durationMs) + '</td></tr>';
         html += '<tr><td><strong>Batches Executed</strong></td><td>' + this.totalBatchesExecuted + '</td></tr>';
         html += '<tr><td><strong>Records Processed</strong></td><td>' + this.totalRecordsProcessed + '</td></tr>';
-        html += '<tr><td><strong>Records Updated</strong></td><td>' + this.totalRecordsUpdated + '</td></tr>';
+        html += '<tr><td><strong>Records ' + (this.simulationMode ? 'Would Be Updated' : 'Updated') + '</strong></td><td>' + this.totalRecordsUpdated + '</td></tr>';
         html += '<tr><td><strong>Records Failed</strong></td><td>' + this.totalRecordsFailed + '</td></tr>';
         html += '</table>';
         
@@ -116,10 +130,12 @@ public with sharing class util_closer_BatchMetrics {
      * @return Formatted string for logging.
      */
     public String toLogSummary() {
-        return 'Batch Metrics: ' +
+        String modePrefix = this.simulationMode ? '[SIMULATION] ' : '';
+        String updateLabel = this.simulationMode ? 'Would Update' : 'Updated';
+        return modePrefix + 'Batch Metrics: ' +
             'Batches=' + this.totalBatchesExecuted + ', ' +
             'Processed=' + this.totalRecordsProcessed + ', ' +
-            'Updated=' + this.totalRecordsUpdated + ', ' +
+            updateLabel + '=' + this.totalRecordsUpdated + ', ' +
             'Failed=' + this.totalRecordsFailed;
     }
     

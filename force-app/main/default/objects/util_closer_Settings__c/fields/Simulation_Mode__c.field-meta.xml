@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Simulation_Mode__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When enabled, the batch job will run in simulation mode - evaluating rules and logging what would be changed, but NOT actually updating any Case records. Use this to preview the impact of rules before enabling actual processing.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enable to run in dry-run mode. Cases will be evaluated but not updated. Check debug logs to see what would have been changed.</inlineHelpText>
+    <label>Simulation Mode</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
