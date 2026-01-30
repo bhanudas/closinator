@@ -22,8 +22,10 @@ public without sharing class util_closer_CaseDataAccess {
         
         // Use SOQL with bind variables for proper query execution
         // Note: RecordTypeId is available but we query it separately if needed for rule evaluation
+        // Include Origin, Owner.Name, and LastModifiedBy.Name for rule filtering
         return Database.getQueryLocator([
-            SELECT Id, Status, LastModifiedDate, CreatedDate
+            SELECT Id, Status, LastModifiedDate, CreatedDate, Origin,
+                   Owner.Name, LastModifiedBy.Name
             FROM Case
             WHERE IsClosed = false
             AND Status IN :sourceStatuses

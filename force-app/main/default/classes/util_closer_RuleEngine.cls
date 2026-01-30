@@ -42,7 +42,8 @@ public with sharing class util_closer_RuleEngine {
                    Description__c, Stop_Processing__c,
                    Child_Object_API_Name__c, Child_Lookup_Field__c,
                    Child_Filter_Field__c, Child_Filter_Value__c,
-                   Child_Filter_Operator__c, Require_Child_Record__c
+                   Child_Filter_Operator__c, Require_Child_Record__c,
+                   Origins__c, Owner_Name_Like__c, Last_Modified_By_Name_Like__c
             FROM util_closer_Case_Status_Rule__mdt
             WHERE Is_Active__c = true
             ORDER BY Execution_Order__c ASC
@@ -253,6 +254,44 @@ public with sharing class util_closer_RuleEngine {
             return false;
         }
 
+        // Check Origin filter
+        if (String.isNotBlank(rule.Origins__c)) {
+            Set<String> allowedOrigins = parseList(rule.Origins__c);
+            try {
+                String caseOrigin = (String)c.get('Origin');
+                if (caseOrigin == null || !allowedOrigins.contains(caseOrigin)) {
+                    return false;
+                }
+            } catch (SObjectException e) {
+                // Origin field not available, skip this check
+            }
+        }
+
+        // Check Owner Name Like filter
+        if (String.isNotBlank(rule.Owner_Name_Like__c)) {
+            try {
+                // Access Owner.Name using relationship path for polymorphic field
+                String ownerName = getRelatedFieldValue(c, 'Owner', 'Name');
+                if (ownerName == null || !matchesLikePattern(ownerName, rule.Owner_Name_Like__c)) {
+                    return false;
+                }
+            } catch (Exception e) {
+                // Owner not available, skip this check
+            }
+        }
+
+        // Check Last Modified By Name Like filter
+        if (String.isNotBlank(rule.Last_Modified_By_Name_Like__c)) {
+            try {
+                String lastModifiedByName = getRelatedFieldValue(c, 'LastModifiedBy', 'Name');
+                if (lastModifiedByName == null || !matchesLikePattern(lastModifiedByName, rule.Last_Modified_By_Name_Like__c)) {
+                    return false;
+                }
+            } catch (Exception e) {
+                // LastModifiedBy not available, skip this check
+            }
+        }
+
         return true;
     }
     
@@ -295,6 +334,65 @@ public with sharing class util_closer_RuleEngine {
             return 0;
         }
         return dt.date().daysBetween(Date.today());
+    }
+
+    /**
+     * @description Safely gets a field value from a related object.
+     * Handles cases where the relationship might not be queried.
+     * @param record The parent SObject.
+     * @param relationshipName The relationship name (e.g., 'Owner', 'LastModifiedBy').
+     * @param fieldName The field name on the related object (e.g., 'Name').
+     * @return The field value as String, or null if not available.
+     */
+    @TestVisible
+    private static String getRelatedFieldValue(SObject record, String relationshipName, String fieldName) {
+        if (record == null) {
+            return null;
+        }
+        try {
+            SObject relatedRecord = record.getSObject(relationshipName);
+            if (relatedRecord == null) {
+                return null;
+            }
+            return (String)relatedRecord.get(fieldName);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * @description Checks if a value matches a SQL LIKE pattern.
+     * Supports % as wildcard (matches any characters) and _ as single character wildcard.
+     * @param value The value to check.
+     * @param likePattern The LIKE pattern to match against.
+     * @return True if the value matches the pattern.
+     */
+    @TestVisible
+    private static Boolean matchesLikePattern(String value, String likePattern) {
+        if (value == null || likePattern == null) {
+            return false;
+        }
+
+        // Convert SQL LIKE pattern to regex
+        // Escape regex special characters except % and _
+        String regex = '';
+        for (Integer i = 0; i < likePattern.length(); i++) {
+            String ch = likePattern.substring(i, i + 1);
+            if (ch == '%') {
+                regex += '.*';
+            } else if (ch == '_') {
+                regex += '.';
+            } else if ('\\[](){}^$.|*+?'.contains(ch)) {
+                regex += '\\' + ch;
+            } else {
+                regex += ch;
+            }
+        }
+
+        // Case-insensitive match
+        Pattern regexPattern = Pattern.compile('(?i)^' + regex + '$');
+        Matcher m = regexPattern.matcher(value);
+        return m.matches();
     }
 }
 
