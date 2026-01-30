@@ -39,6 +39,10 @@
         <apexClass>util_closer_SettingsService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>util_closer_AutoCloseReasonException</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <customSettingAccesses>
         <enabled>true</enabled>
         <name>util_closer_Settings__c</name>
@@ -76,6 +80,16 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>util_closer_Settings__c.Scheduled_Job_Name__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>util_closer_Settings__c.Auto_Close_Reason_Enabled__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>util_closer_Settings__c.Auto_Close_Reason_Field__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <userPermissions>

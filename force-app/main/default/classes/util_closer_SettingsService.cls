@@ -90,7 +90,24 @@ public with sharing class util_closer_SettingsService {
         String jobName = getSettings().Scheduled_Job_Name__c;
         return String.isNotBlank(jobName) ? jobName : DEFAULT_JOB_NAME;
     }
-    
+
+    /**
+     * @description Returns whether auto close reason feature is enabled.
+     * @return True if auto close reason is enabled.
+     */
+    public static Boolean isAutoCloseReasonEnabled() {
+        return getSettings().Auto_Close_Reason_Enabled__c == true;
+    }
+
+    /**
+     * @description Returns the API name of the Case field to populate with the reason.
+     * @return The field API name, or null if not configured.
+     */
+    public static String getAutoCloseReasonField() {
+        String fieldName = getSettings().Auto_Close_Reason_Field__c;
+        return String.isNotBlank(fieldName) ? fieldName.trim() : null;
+    }
+
     /**
      * @description Clears the cached settings. Useful for testing.
      */

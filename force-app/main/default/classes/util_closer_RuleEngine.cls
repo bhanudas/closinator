@@ -3,7 +3,20 @@
  * Core rule processing engine for the Case Auto-Closer system.
  */
 public with sharing class util_closer_RuleEngine {
-    
+
+    /**
+     * @description Wrapper class to hold status and reason changes for a Case.
+     */
+    public class CaseChange {
+        public String newStatus;
+        public String reason;
+
+        public CaseChange(String newStatus, String reason) {
+            this.newStatus = newStatus;
+            this.reason = reason;
+        }
+    }
+
     /**
      * @description Returns active rules ordered by Execution_Order__c.
      * @return List of active rules.
@@ -12,7 +25,7 @@ public with sharing class util_closer_RuleEngine {
         return [
             SELECT Id, DeveloperName, MasterLabel,
                    Is_Active__c, Execution_Order__c,
-                   Source_Status__c, Target_Status__c,
+                   Source_Status__c, Target_Status__c, Target_Reason__c,
                    Days_Since_Last_Modified__c, Days_Since_Created__c,
                    Days_Since_Last_Activity__c, Record_Type_Developer_Names__c,
                    Exclude_Record_Type_Developer_Names__c, Additional_Filter_Logic__c,
@@ -66,38 +79,38 @@ public with sharing class util_closer_RuleEngine {
      * @description Evaluates cases against rules and returns status changes.
      * @param cases List of cases to evaluate.
      * @param rules List of rules to apply.
-     * @return Map of CaseId to new Status value.
+     * @return Map of CaseId to CaseChange containing new status and optional reason.
      */
-    public static Map<Id, String> evaluateCases(List<Case> cases, List<util_closer_Case_Status_Rule__mdt> rules) {
-        Map<Id, String> statusChanges = new Map<Id, String>();
-        
+    public static Map<Id, CaseChange> evaluateCases(List<Case> cases, List<util_closer_Case_Status_Rule__mdt> rules) {
+        Map<Id, CaseChange> caseChanges = new Map<Id, CaseChange>();
+
         for (Case c : cases) {
-            String newStatus = evaluateCaseAgainstRules(c, rules);
-            if (newStatus != null) {
-                statusChanges.put(c.Id, newStatus);
+            CaseChange change = evaluateCaseAgainstRules(c, rules);
+            if (change != null) {
+                caseChanges.put(c.Id, change);
             }
         }
-        
-        util_closer_Logger.debug('RuleEngine', 'Evaluated ' + cases.size() + ' cases, ' + statusChanges.size() + ' require updates');
-        
-        return statusChanges;
+
+        util_closer_Logger.debug('RuleEngine', 'Evaluated ' + cases.size() + ' cases, ' + caseChanges.size() + ' require updates');
+
+        return caseChanges;
     }
-    
+
     /**
      * @description Evaluates a single case against all rules.
      * @param c The case to evaluate.
      * @param rules The rules to apply.
-     * @return New status if a rule matches, null otherwise.
+     * @return CaseChange with new status and reason if a rule matches, null otherwise.
      */
-    private static String evaluateCaseAgainstRules(Case c, List<util_closer_Case_Status_Rule__mdt> rules) {
+    private static CaseChange evaluateCaseAgainstRules(Case c, List<util_closer_Case_Status_Rule__mdt> rules) {
         for (util_closer_Case_Status_Rule__mdt rule : rules) {
             if (caseMatchesRule(c, rule)) {
                 util_closer_Logger.debug('RuleEngine', 'Case ' + c.Id + ' matches rule ' + rule.DeveloperName);
-                
+
                 if (rule.Stop_Processing__c == true) {
-                    return rule.Target_Status__c;
+                    return new CaseChange(rule.Target_Status__c, rule.Target_Reason__c);
                 }
-                return rule.Target_Status__c;
+                return new CaseChange(rule.Target_Status__c, rule.Target_Reason__c);
             }
         }
         return null;

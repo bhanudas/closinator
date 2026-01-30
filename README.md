@@ -318,6 +318,8 @@ Configure system-wide settings via Custom Settings:
 | `Scheduled_Job_Name__c` | Name of the scheduled job | `util_closer_CaseStatusJob` |
 | `Error_Notification_Emails__c` | Comma-separated emails for error notifications | (empty) |
 | `Completion_Notification_Emails__c` | Comma-separated emails for completion notifications | (empty) |
+| `Auto_Close_Reason_Enabled__c` | Enable/disable automatic reason population | `false` |
+| `Auto_Close_Reason_Field__c` | API name of Case field to store the reason value | (empty) |
 
 ### Custom Metadata Rules (`util_closer_Case_Status_Rule__mdt`)
 
@@ -339,6 +341,7 @@ Create rules to define when and how Cases should be updated:
 | `Additional_Filter_Logic__c` | Additional SOQL WHERE clause logic | No |
 | `Stop_Processing__c` | Stop processing after this rule executes | No |
 | `Description__c` | Rule description | No |
+| `Target_Reason__c` | Reason value to set when rule matches (requires Auto Close Reason feature) | No |
 
 ### Example Rule Configuration
 
@@ -353,6 +356,82 @@ Create rules to define when and how Cases should be updated:
 - Target Status: `Escalated`
 - Days Since Created: `7`
 - Execution Order: `2`
+
+### Auto Close Reason Feature
+
+The Auto Close Reason feature allows you to automatically populate a reason field on Cases when rules are applied. This is useful for tracking why cases were automatically closed or transitioned.
+
+#### How It Works
+
+1. When enabled, the batch job will populate a configured Case field with the reason value defined in each rule
+2. The target field can be any text field or picklist field on the Case object
+3. If a rule's `Target_Reason__c` is blank, no reason will be set for that rule (status will still be updated)
+4. If the feature is enabled but the configured field doesn't exist, the batch job will abort with an error
+
+#### Setup Instructions
+
+**Step 1: Create or identify your target field**
+
+You can use the standard `Reason` field on Case, or create a custom field:
+
+```
+Field Type: Text (255) or Picklist
+API Name: e.g., Close_Reason__c or Reason
+```
+
+If using a picklist, ensure the values you configure in `Target_Reason__c` match the picklist values exactly.
+
+**Step 2: Configure the Custom Settings**
+
+Set the following fields in `util_closer_Settings__c`:
+
+| Field | Value |
+|-------|-------|
+| `Auto_Close_Reason_Enabled__c` | `true` |
+| `Auto_Close_Reason_Field__c` | API name of your target field (e.g., `Reason` or `Close_Reason__c`) |
+
+Via Anonymous Apex:
+
+```apex
+util_closer_Settings__c settings = util_closer_Settings__c.getOrgDefaults();
+settings.Auto_Close_Reason_Enabled__c = true;
+settings.Auto_Close_Reason_Field__c = 'Reason'; // or your custom field API name
+upsert settings;
+```
+
+**Step 3: Configure reasons in your rules**
+
+For each rule in `util_closer_Case_Status_Rule__mdt`, set the `Target_Reason__c` field:
+
+| Rule | Target_Reason__c Example |
+|------|--------------------------|
+| Close Stale Waiting Cases | `Auto-closed: No customer response` |
+| Escalate Old New Cases | `Auto-escalated: Exceeded SLA` |
+
+#### Example Configuration
+
+**Scenario:** Auto-close cases waiting on customer response after 30 days and set a reason.
+
+1. Create a custom field `Close_Reason__c` (Text 255) on Case, or use the standard `Reason` field
+2. Enable the feature:
+   ```apex
+   util_closer_Settings__c settings = util_closer_Settings__c.getOrgDefaults();
+   settings.Auto_Close_Reason_Enabled__c = true;
+   settings.Auto_Close_Reason_Field__c = 'Close_Reason__c';
+   upsert settings;
+   ```
+3. Configure the rule's `Target_Reason__c`: `Auto-closed due to customer inactivity`
+
+When the batch runs, matching cases will have both their Status updated to "Closed" and their `Close_Reason__c` field populated with "Auto-closed due to customer inactivity".
+
+#### Error Handling
+
+If the Auto Close Reason feature is enabled but misconfigured, the batch job will fail with a descriptive error:
+
+- **No field configured:** "Auto Close Reason is enabled but no field is configured..."
+- **Field doesn't exist:** "Auto Close Reason field 'XYZ' does not exist on the Case object..."
+
+This ensures data integrity by preventing the batch from running with an invalid configuration.
 
 ## Usage
 
