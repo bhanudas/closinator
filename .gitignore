@@ -47,3 +47,6 @@ $RECYCLE.BIN/
 **/.venv/
 **/venv/
 docs/analysis/
+
+# Custom Metadata (managed per-org, not in source control)
+force-app/main/default/customMetadata/
