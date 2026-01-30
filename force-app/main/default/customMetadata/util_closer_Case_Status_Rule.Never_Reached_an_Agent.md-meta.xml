@@ -54,4 +54,12 @@
         <field>Stop_Processing__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
+    <values>
+        <field>Days_Since_Created__c</field>
+        <value xsi:type="xsd:double">7</value>
+    </values>
+    <values>
+        <field>Record_Type_Developer_Names__c</field>
+        <value xsi:type="xsd:string">PVL</value>
+    </values>
 </CustomMetadata>
