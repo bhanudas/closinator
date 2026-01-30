@@ -252,14 +252,147 @@ private class util_closer_SettingsService_Test {
             Scheduled_Job_Name__c = null,
             Is_Active__c = true
         );
-        
+
         // Execute
         Test.startTest();
         String jobName = util_closer_SettingsService.getScheduledJobName();
         Test.stopTest();
-        
+
         // Verify
         System.assertEquals('util_closer_CaseStatusJob', jobName, 'Should return default job name');
+    }
+
+    @isTest
+    static void testIsAutoCloseReasonEnabled_True() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, false, true, null, null, true, 'Reason'
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isAutoCloseReasonEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(true, isEnabled, 'Auto Close Reason should be enabled');
+    }
+
+    @isTest
+    static void testIsAutoCloseReasonEnabled_False() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, false, true, null, null, false, null
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isAutoCloseReasonEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isEnabled, 'Auto Close Reason should be disabled');
+    }
+
+    @isTest
+    static void testIsAutoCloseReasonEnabled_Null() {
+        // Setup - null value should return false
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Auto_Close_Reason_Enabled__c = null
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isAutoCloseReasonEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isEnabled, 'Null Auto Close Reason Enabled should return false');
+    }
+
+    @isTest
+    static void testGetAutoCloseReasonField_CustomValue() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, false, true, null, null, true, 'Close_Reason__c'
+        );
+
+        // Execute
+        Test.startTest();
+        String fieldName = util_closer_SettingsService.getAutoCloseReasonField();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals('Close_Reason__c', fieldName, 'Should return configured field name');
+    }
+
+    @isTest
+    static void testGetAutoCloseReasonField_WithSpaces() {
+        // Setup - field name with leading/trailing spaces should be trimmed
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Auto_Close_Reason_Field__c = '  Reason  '
+        );
+
+        // Execute
+        Test.startTest();
+        String fieldName = util_closer_SettingsService.getAutoCloseReasonField();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals('Reason', fieldName, 'Field name should be trimmed');
+    }
+
+    @isTest
+    static void testGetAutoCloseReasonField_Null() {
+        // Setup - null field should return null
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Auto_Close_Reason_Field__c = null
+        );
+
+        // Execute
+        Test.startTest();
+        String fieldName = util_closer_SettingsService.getAutoCloseReasonField();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(null, fieldName, 'Null field should return null');
+    }
+
+    @isTest
+    static void testGetAutoCloseReasonField_Empty() {
+        // Setup - empty string should return null
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Auto_Close_Reason_Field__c = ''
+        );
+
+        // Execute
+        Test.startTest();
+        String fieldName = util_closer_SettingsService.getAutoCloseReasonField();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(null, fieldName, 'Empty string should return null');
+    }
+
+    @isTest
+    static void testGetAutoCloseReasonField_Whitespace() {
+        // Setup - whitespace only should return null
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Auto_Close_Reason_Field__c = '   '
+        );
+
+        // Execute
+        Test.startTest();
+        String fieldName = util_closer_SettingsService.getAutoCloseReasonField();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(null, fieldName, 'Whitespace only should return null');
     }
 }
 

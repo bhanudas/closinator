@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Auto_Close_Reason_Enabled__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When enabled, the batch job will populate the configured reason field on Cases when rules are applied. If enabled but the configured field does not exist, the batch job will abort with an error.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enable to automatically set a reason value when rules update Case status. Requires Auto Close Reason Field to be configured.</inlineHelpText>
+    <label>Auto Close Reason Enabled</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

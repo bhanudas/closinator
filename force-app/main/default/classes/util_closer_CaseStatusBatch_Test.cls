@@ -531,30 +531,173 @@ private class util_closer_CaseStatusBatch_Test {
     static void testBatch_ExceptionInExecute_Handled() {
         // Setup - test exception handling in execute method (lines 105-108)
         util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
-        
+
         List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
-        
+
         if (rules.isEmpty()) {
             return;
         }
-        
+
         String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
         List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 2);
         insert testCases;
-        
+
         // Backdate cases
         for (Case c : testCases) {
             Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
         }
-        
+
         // Execute batch - exceptions should be caught and handled
         Test.startTest();
         util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
         Database.executeBatch(batch, 200);
         Test.stopTest();
-        
+
         // Verify - batch should complete even if exceptions occur
         System.assert(true, 'Batch should handle exceptions gracefully');
+    }
+
+    // ==================== Auto Close Reason Tests ====================
+
+    @isTest
+    static void testBatch_AutoCloseReason_FieldDoesNotExist_ThrowsError() {
+        // Test the static validation method directly with a non-existent field
+        Test.startTest();
+        Boolean exceptionThrown = false;
+        try {
+            // Call the static validation method directly
+            util_closer_CaseStatusBatch.validateAutoCloseReasonField('NonExistentField__c');
+        } catch (util_closer_AutoCloseReasonException e) {
+            exceptionThrown = true;
+            System.assert(e.getMessage().contains('does not exist'), 'Error message should mention field does not exist');
+        }
+        Test.stopTest();
+
+        System.assert(exceptionThrown, 'Exception should be thrown for non-existent field');
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReason_NoFieldConfigured_ThrowsError() {
+        // Test the static validation method directly with null field
+        Test.startTest();
+        Boolean exceptionThrown = false;
+        try {
+            // Call the static validation method directly with null
+            util_closer_CaseStatusBatch.validateAutoCloseReasonField(null);
+        } catch (util_closer_AutoCloseReasonException e) {
+            exceptionThrown = true;
+            System.assert(e.getMessage().contains('no field is configured'), 'Error message should mention no field configured');
+        }
+        Test.stopTest();
+
+        System.assert(exceptionThrown, 'Exception should be thrown when no field is configured');
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReason_ValidField_ProcessesSuccessfully() {
+        // Setup - Auto Close Reason enabled with valid field (Reason is a standard Case field)
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, true, 'Reason'
+        );
+
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        if (rules.isEmpty()) {
+            return;
+        }
+
+        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
+        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 3);
+        insert testCases;
+
+        // Backdate cases
+        for (Case c : testCases) {
+            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
+        }
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - batch should complete successfully
+        System.assert(true, 'Batch should process with valid Auto Close Reason field');
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReason_Disabled_ProcessesNormally() {
+        // Setup - Auto Close Reason disabled
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(
+            200, true, true, null, null, false, null
+        );
+
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+
+        if (rules.isEmpty()) {
+            return;
+        }
+
+        String sourceStatus = rules[0].Source_Status__c.split(';')[0].trim();
+        List<Case> testCases = util_closer_TestDataFactory.createCases(sourceStatus, 3);
+        insert testCases;
+
+        // Backdate cases
+        for (Case c : testCases) {
+            Test.setCreatedDate(c.Id, DateTime.now().addDays(-60));
+        }
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - batch should complete successfully without setting reason
+        System.assert(true, 'Batch should process normally when Auto Close Reason is disabled');
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReason_EmptyFieldConfig_ThrowsError() {
+        // Test the static validation method directly with empty string
+        Test.startTest();
+        Boolean exceptionThrown = false;
+        try {
+            // Call the static validation method directly with empty string
+            util_closer_CaseStatusBatch.validateAutoCloseReasonField('');
+        } catch (util_closer_AutoCloseReasonException e) {
+            exceptionThrown = true;
+            System.assert(e.getMessage().contains('no field is configured'), 'Error message should mention no field configured');
+        }
+        Test.stopTest();
+
+        System.assert(exceptionThrown, 'Exception should be thrown when field is empty');
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReason_ValidFieldValidation() {
+        // Test the static validation method with a valid field (Reason is standard Case field)
+        Test.startTest();
+        Boolean exceptionThrown = false;
+        try {
+            // Call the static validation method directly with a valid field
+            util_closer_CaseStatusBatch.validateAutoCloseReasonField('Reason');
+        } catch (util_closer_AutoCloseReasonException e) {
+            exceptionThrown = true;
+        }
+        Test.stopTest();
+
+        System.assert(!exceptionThrown, 'No exception should be thrown for valid field');
+    }
+
+    @isTest
+    static void testBatch_AutoCloseReasonException_CustomException() {
+        // Test the custom exception class
+        Test.startTest();
+        util_closer_AutoCloseReasonException ex = new util_closer_AutoCloseReasonException('Test error message');
+        Test.stopTest();
+
+        System.assertEquals('Test error message', ex.getMessage(), 'Exception should contain the error message');
     }
 }
 

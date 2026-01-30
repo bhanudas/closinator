@@ -91,7 +91,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - no changes expected for 'Working' status
@@ -106,7 +106,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>(), rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>(), rules);
         Test.stopTest();
         
         // Verify
@@ -143,7 +143,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - the case may or may not match depending on rule criteria
@@ -169,7 +169,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(testCases, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(testCases, rules);
         Test.stopTest();
         
         // Verify
@@ -238,7 +238,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - method should execute without error
@@ -264,7 +264,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - method should handle missing LastActivityDate field gracefully
@@ -294,7 +294,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify
@@ -323,7 +323,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify
@@ -350,7 +350,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - stop processing flag should be handled
@@ -393,7 +393,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - if rule has Days_Since_Last_Modified__c, case should not match
@@ -421,7 +421,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - if rule has Days_Since_Created__c, case should not match
@@ -448,7 +448,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute - LastActivityDate field doesn't exist on Case, so catch block should execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - should handle missing field gracefully
@@ -485,7 +485,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - should handle record type inclusion check
@@ -521,7 +521,7 @@ private class util_closer_RuleEngine_Test {
         
         // Execute
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
         
         // Verify - should handle record type exclusion check
@@ -549,11 +549,51 @@ private class util_closer_RuleEngine_Test {
         
         // Execute - RecordType relationship not queried, so getSObject will fail
         Test.startTest();
-        Map<Id, String> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
+        Map<Id, util_closer_RuleEngine.CaseChange> changes = util_closer_RuleEngine.evaluateCases(new List<Case>{ testCase }, rules);
         Test.stopTest();
-        
+
         // Verify - should handle missing RecordType gracefully
         System.assertNotEquals(null, changes, 'Changes map should not be null');
+    }
+
+    @isTest
+    static void testCaseChange_WrapperClass() {
+        // Test the CaseChange wrapper class
+        Test.startTest();
+        util_closer_RuleEngine.CaseChange change = new util_closer_RuleEngine.CaseChange('Closed', 'Auto-closed due to inactivity');
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals('Closed', change.newStatus, 'New status should be set');
+        System.assertEquals('Auto-closed due to inactivity', change.reason, 'Reason should be set');
+    }
+
+    @isTest
+    static void testCaseChange_WrapperClass_NullReason() {
+        // Test the CaseChange wrapper class with null reason
+        Test.startTest();
+        util_closer_RuleEngine.CaseChange change = new util_closer_RuleEngine.CaseChange('Escalated', null);
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals('Escalated', change.newStatus, 'New status should be set');
+        System.assertEquals(null, change.reason, 'Reason should be null');
+    }
+
+    @isTest
+    static void testGetActiveRules_IncludesTargetReason() {
+        // Verify that getActiveRules includes Target_Reason__c field
+        Test.startTest();
+        List<util_closer_Case_Status_Rule__mdt> rules = util_closer_RuleEngine.getActiveRules();
+        Test.stopTest();
+
+        // Verify - rules should be returned (may have Target_Reason__c populated or not)
+        System.assertNotEquals(null, rules, 'Rules should not be null');
+        // The Target_Reason__c field should be queryable without error
+        for (util_closer_Case_Status_Rule__mdt rule : rules) {
+            // Just accessing the field should not throw an error
+            String reason = rule.Target_Reason__c;
+        }
     }
 }
 

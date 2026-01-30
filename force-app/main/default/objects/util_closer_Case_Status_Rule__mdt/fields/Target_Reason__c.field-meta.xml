@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Target_Reason__c</fullName>
+    <description>The reason value to set on the Case when this rule matches. Only used when Auto Close Reason is enabled in settings. Leave blank to skip setting a reason for this rule.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>The reason value to populate when this rule updates a Case. Leave blank to skip setting a reason for this rule.</inlineHelpText>
+    <label>Target Reason</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

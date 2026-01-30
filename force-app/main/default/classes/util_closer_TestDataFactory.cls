@@ -38,11 +38,34 @@ public class util_closer_TestDataFactory {
      * @return Settings instance (not inserted).
      */
     public static util_closer_Settings__c createSettings(
-        Integer batchSize, 
-        Boolean debugMode, 
+        Integer batchSize,
+        Boolean debugMode,
         Boolean isActive,
         String errorEmails,
         String completionEmails
+    ) {
+        return createSettings(batchSize, debugMode, isActive, errorEmails, completionEmails, false, null);
+    }
+
+    /**
+     * @description Creates settings with all customizable values including Auto Close Reason settings.
+     * @param batchSize The batch size.
+     * @param debugMode Debug mode flag.
+     * @param isActive Active flag.
+     * @param errorEmails Error notification emails.
+     * @param completionEmails Completion notification emails.
+     * @param autoCloseReasonEnabled Auto Close Reason feature enabled flag.
+     * @param autoCloseReasonField API name of the Case field for the reason.
+     * @return Settings instance (not inserted).
+     */
+    public static util_closer_Settings__c createSettings(
+        Integer batchSize,
+        Boolean debugMode,
+        Boolean isActive,
+        String errorEmails,
+        String completionEmails,
+        Boolean autoCloseReasonEnabled,
+        String autoCloseReasonField
     ) {
         return new util_closer_Settings__c(
             Batch_Size__c = batchSize,
@@ -51,7 +74,9 @@ public class util_closer_TestDataFactory {
             Error_Notification_Emails__c = errorEmails,
             Completion_Notification_Emails__c = completionEmails,
             Cron_Expression__c = '0 0 2 * * ?',
-            Scheduled_Job_Name__c = 'util_closer_CaseStatusJob'
+            Scheduled_Job_Name__c = 'util_closer_CaseStatusJob',
+            Auto_Close_Reason_Enabled__c = autoCloseReasonEnabled,
+            Auto_Close_Reason_Field__c = autoCloseReasonField
         );
     }
     
