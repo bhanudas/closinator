@@ -91,8 +91,78 @@ public without sharing class util_closer_CaseDataAccess {
                        'WHERE ' + whereClause;
         
         util_closer_Logger.debug('CaseDataAccess', 'Querying Cases without sharing restrictions with custom WHERE clause.');
-        
+
         return Database.getQueryLocator(query);
+    }
+
+    /**
+     * @description Queries child records related to Cases without sharing restrictions.
+     * Uses dynamic SOQL to query any child object that has a lookup to Case.
+     * @param childObjectApiName API name of the child object (e.g., 'UJET__UJET_Session__c').
+     * @param childLookupField API name of the lookup field on child pointing to Case (e.g., 'UJET__Case__c').
+     * @param childFilterField Optional field to include in query for filtering (e.g., 'UJET__Status__c').
+     * @param caseIds Set of Case IDs to query children for.
+     * @return List of child SObjects related to the specified Cases.
+     */
+    public static List<SObject> queryChildRecords(
+        String childObjectApiName,
+        String childLookupField,
+        String childFilterField,
+        Set<Id> caseIds
+    ) {
+        if (String.isBlank(childObjectApiName) || String.isBlank(childLookupField)) {
+            util_closer_Logger.debug('CaseDataAccess', 'Missing child object or lookup field. Returning empty list.');
+            return new List<SObject>();
+        }
+
+        if (caseIds == null || caseIds.isEmpty()) {
+            util_closer_Logger.debug('CaseDataAccess', 'No Case IDs provided. Returning empty list.');
+            return new List<SObject>();
+        }
+
+        // Validate that the object exists
+        Schema.SObjectType childObjectType = Schema.getGlobalDescribe().get(childObjectApiName);
+        if (childObjectType == null) {
+            util_closer_Logger.error('CaseDataAccess: Child object ' + childObjectApiName + ' does not exist.');
+            return new List<SObject>();
+        }
+
+        // Build the field list
+        Set<String> fields = new Set<String>{ 'Id', childLookupField };
+        if (String.isNotBlank(childFilterField)) {
+            fields.add(childFilterField);
+        }
+
+        // Validate fields exist on the object
+        Map<String, Schema.SObjectField> fieldMap = childObjectType.getDescribe().fields.getMap();
+        Set<String> validFields = new Set<String>();
+        for (String field : fields) {
+            if (fieldMap.containsKey(field.toLowerCase())) {
+                validFields.add(field);
+            } else {
+                util_closer_Logger.debug('CaseDataAccess', 'Field ' + field + ' not found on ' + childObjectApiName + ', skipping.');
+            }
+        }
+
+        // Ensure lookup field is included (it's required)
+        if (!validFields.contains(childLookupField) && !fieldMap.containsKey(childLookupField.toLowerCase())) {
+            util_closer_Logger.error('CaseDataAccess: Lookup field ' + childLookupField + ' not found on ' + childObjectApiName);
+            return new List<SObject>();
+        }
+
+        String fieldList = String.join(new List<String>(validFields), ', ');
+        String query = 'SELECT ' + fieldList + ' ' +
+                       'FROM ' + String.escapeSingleQuotes(childObjectApiName) + ' ' +
+                       'WHERE ' + String.escapeSingleQuotes(childLookupField) + ' IN :caseIds';
+
+        util_closer_Logger.debug('CaseDataAccess', 'Querying child records: ' + childObjectApiName + ' for ' + caseIds.size() + ' Cases');
+
+        try {
+            return Database.query(query);
+        } catch (Exception e) {
+            util_closer_Logger.error('CaseDataAccess: Error querying child records: ' + e.getMessage());
+            return new List<SObject>();
+        }
     }
 }
 

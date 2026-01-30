@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Child_Filter_Operator__c</fullName>
+    <description>Operator to use when comparing child filter field to value.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Select how to compare the child field value.</inlineHelpText>
+    <label>Child Filter Operator</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Equals</fullName>
+                <default>true</default>
+                <label>Equals</label>
+            </value>
+            <value>
+                <fullName>Not Equals</fullName>
+                <default>false</default>
+                <label>Not Equals</label>
+            </value>
+            <value>
+                <fullName>Contains</fullName>
+                <default>false</default>
+                <label>Contains</label>
+            </value>
+            <value>
+                <fullName>Is Null</fullName>
+                <default>false</default>
+                <label>Is Null</label>
+            </value>
+            <value>
+                <fullName>Is Not Null</fullName>
+                <default>false</default>
+                <label>Is Not Null</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

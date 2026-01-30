@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Child_Filter_Value__c</fullName>
+    <description>Value(s) to match on the child filter field. Use semicolon to separate multiple values (e.g., Finished;Completed).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Enter value(s) to match. Separate multiple values with semicolons.</inlineHelpText>
+    <label>Child Filter Value</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

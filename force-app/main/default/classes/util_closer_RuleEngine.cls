@@ -5,6 +5,12 @@
 public with sharing class util_closer_RuleEngine {
 
     /**
+     * @description Mock rules for testing. When set, getActiveRules() returns these instead of querying.
+     */
+    @TestVisible
+    private static List<util_closer_Case_Status_Rule__mdt> mockRules;
+
+    /**
      * @description Wrapper class to hold status and reason changes for a Case.
      */
     public class CaseChange {
@@ -19,9 +25,13 @@ public with sharing class util_closer_RuleEngine {
 
     /**
      * @description Returns active rules ordered by Execution_Order__c.
+     * Uses mockRules if set (for testing), otherwise queries custom metadata.
      * @return List of active rules.
      */
     public static List<util_closer_Case_Status_Rule__mdt> getActiveRules() {
+        if (mockRules != null) {
+            return mockRules;
+        }
         return [
             SELECT Id, DeveloperName, MasterLabel,
                    Is_Active__c, Execution_Order__c,
@@ -29,11 +39,24 @@ public with sharing class util_closer_RuleEngine {
                    Days_Since_Last_Modified__c, Days_Since_Created__c,
                    Days_Since_Last_Activity__c, Record_Type_Developer_Names__c,
                    Exclude_Record_Type_Developer_Names__c, Additional_Filter_Logic__c,
-                   Description__c, Stop_Processing__c
+                   Description__c, Stop_Processing__c,
+                   Child_Object_API_Name__c, Child_Lookup_Field__c,
+                   Child_Filter_Field__c, Child_Filter_Value__c,
+                   Child_Filter_Operator__c, Require_Child_Record__c
             FROM util_closer_Case_Status_Rule__mdt
             WHERE Is_Active__c = true
             ORDER BY Execution_Order__c ASC
         ];
+    }
+
+    /**
+     * @description Checks if any rules have child criteria configured.
+     * @param rules List of rules to check.
+     * @return True if at least one rule has child criteria.
+     */
+    @TestVisible
+    public static Boolean rulesHaveChildCriteria(List<util_closer_Case_Status_Rule__mdt> rules) {
+        return util_closer_ChildRecordService.rulesHaveChildCriteria(rules);
     }
     
     /**
@@ -82,10 +105,28 @@ public with sharing class util_closer_RuleEngine {
      * @return Map of CaseId to CaseChange containing new status and optional reason.
      */
     public static Map<Id, CaseChange> evaluateCases(List<Case> cases, List<util_closer_Case_Status_Rule__mdt> rules) {
+        return evaluateCases(cases, rules, null);
+    }
+
+    /**
+     * @description Evaluates cases against rules and returns status changes with child data support.
+     * @param cases List of cases to evaluate.
+     * @param rules List of rules to apply.
+     * @param childDataMap Map of Case ID to list of child records (null if no child criteria).
+     * @return Map of CaseId to CaseChange containing new status and optional reason.
+     */
+    public static Map<Id, CaseChange> evaluateCases(
+        List<Case> cases,
+        List<util_closer_Case_Status_Rule__mdt> rules,
+        Map<Id, List<SObject>> childDataMap
+    ) {
         Map<Id, CaseChange> caseChanges = new Map<Id, CaseChange>();
 
         for (Case c : cases) {
-            CaseChange change = evaluateCaseAgainstRules(c, rules);
+            List<SObject> childRecords = (childDataMap != null && childDataMap.containsKey(c.Id))
+                ? childDataMap.get(c.Id)
+                : new List<SObject>();
+            CaseChange change = evaluateCaseAgainstRules(c, rules, childRecords);
             if (change != null) {
                 caseChanges.put(c.Id, change);
             }
@@ -100,11 +141,16 @@ public with sharing class util_closer_RuleEngine {
      * @description Evaluates a single case against all rules.
      * @param c The case to evaluate.
      * @param rules The rules to apply.
+     * @param childRecords List of child records for this case.
      * @return CaseChange with new status and reason if a rule matches, null otherwise.
      */
-    private static CaseChange evaluateCaseAgainstRules(Case c, List<util_closer_Case_Status_Rule__mdt> rules) {
+    private static CaseChange evaluateCaseAgainstRules(
+        Case c,
+        List<util_closer_Case_Status_Rule__mdt> rules,
+        List<SObject> childRecords
+    ) {
         for (util_closer_Case_Status_Rule__mdt rule : rules) {
-            if (caseMatchesRule(c, rule)) {
+            if (caseMatchesRule(c, rule, childRecords)) {
                 util_closer_Logger.debug('RuleEngine', 'Case ' + c.Id + ' matches rule ' + rule.DeveloperName);
 
                 if (rule.Stop_Processing__c == true) {
@@ -117,19 +163,31 @@ public with sharing class util_closer_RuleEngine {
     }
     
     /**
-     * @description Checks if a case matches a specific rule.
+     * @description Checks if a case matches a specific rule (without child records).
      * @param c The case to check.
      * @param rule The rule to match against.
      * @return True if the case matches the rule.
      */
     @TestVisible
     private static Boolean caseMatchesRule(Case c, util_closer_Case_Status_Rule__mdt rule) {
+        return caseMatchesRule(c, rule, new List<SObject>());
+    }
+
+    /**
+     * @description Checks if a case matches a specific rule including child criteria.
+     * @param c The case to check.
+     * @param rule The rule to match against.
+     * @param childRecords List of child records for this case.
+     * @return True if the case matches the rule.
+     */
+    @TestVisible
+    private static Boolean caseMatchesRule(Case c, util_closer_Case_Status_Rule__mdt rule, List<SObject> childRecords) {
         // Check source status
         Set<String> sourceStatuses = parseStatusList(rule.Source_Status__c);
         if (!sourceStatuses.contains(c.Status)) {
             return false;
         }
-        
+
         // Check days since last modified
         if (rule.Days_Since_Last_Modified__c != null) {
             Integer daysSinceModified = getDaysSince(c.LastModifiedDate);
@@ -137,7 +195,7 @@ public with sharing class util_closer_RuleEngine {
                 return false;
             }
         }
-        
+
         // Check days since created
         if (rule.Days_Since_Created__c != null) {
             Integer daysSinceCreated = getDaysSince(c.CreatedDate);
@@ -145,7 +203,7 @@ public with sharing class util_closer_RuleEngine {
                 return false;
             }
         }
-        
+
         // Check days since last activity - only if the field exists on the object
         if (rule.Days_Since_Last_Activity__c != null) {
             try {
@@ -161,7 +219,7 @@ public with sharing class util_closer_RuleEngine {
                 // Field not available, skip this check
             }
         }
-        
+
         // Check record type inclusion - only if RecordType is available
         if (String.isNotBlank(rule.Record_Type_Developer_Names__c)) {
             Set<String> includedRecordTypes = parseList(rule.Record_Type_Developer_Names__c);
@@ -175,7 +233,7 @@ public with sharing class util_closer_RuleEngine {
                 // RecordType not available, skip this check
             }
         }
-        
+
         // Check record type exclusion - only if RecordType is available
         if (String.isNotBlank(rule.Exclude_Record_Type_Developer_Names__c)) {
             Set<String> excludedRecordTypes = parseList(rule.Exclude_Record_Type_Developer_Names__c);
@@ -189,7 +247,12 @@ public with sharing class util_closer_RuleEngine {
                 // RecordType not available, skip this check
             }
         }
-        
+
+        // Check child record criteria
+        if (!util_closer_ChildRecordService.caseMatchesChildCriteria(c.Id, rule, childRecords)) {
+            return false;
+        }
+
         return true;
     }
     

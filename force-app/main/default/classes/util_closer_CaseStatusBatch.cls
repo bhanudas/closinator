@@ -68,6 +68,26 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
     }
 
     /**
+     * @description Pre-fetches child records for all Cases in the batch scope.
+     * Uses ChildRecordService to query children in bulk to avoid SOQL in loops.
+     * @param scope List of Cases in the current batch scope.
+     * @return Map of Case ID to list of child records.
+     */
+    private Map<Id, List<SObject>> fetchChildRecordsForBatch(List<Case> scope) {
+        Set<Id> caseIds = new Set<Id>();
+        for (Case c : scope) {
+            caseIds.add(c.Id);
+        }
+
+        Map<String, util_closer_ChildRecordService.ChildCriteria> criteriaMap =
+            util_closer_ChildRecordService.getChildCriteriaFromRules(this.rules);
+
+        util_closer_Logger.debug('CaseStatusBatch', 'Fetching child records for ' + caseIds.size() + ' Cases with ' + criteriaMap.size() + ' criteria configurations');
+
+        return util_closer_ChildRecordService.queryChildRecords(caseIds, criteriaMap);
+    }
+
+    /**
      * @description Static validation method to check if the Auto Close Reason field configuration is valid.
      * Can be used for validation outside of batch context.
      * @param fieldApiName The API name of the field to validate.
@@ -106,8 +126,14 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
         this.metrics.addProcessedCount(scope.size());
 
         try {
-            // Evaluate cases against rules
-            Map<Id, util_closer_RuleEngine.CaseChange> caseChanges = util_closer_RuleEngine.evaluateCases(scope, this.rules);
+            // Pre-fetch child records if any rules have child criteria
+            Map<Id, List<SObject>> childDataMap = null;
+            if (util_closer_RuleEngine.rulesHaveChildCriteria(this.rules)) {
+                childDataMap = fetchChildRecordsForBatch(scope);
+            }
+
+            // Evaluate cases against rules (with child data if available)
+            Map<Id, util_closer_RuleEngine.CaseChange> caseChanges = util_closer_RuleEngine.evaluateCases(scope, this.rules, childDataMap);
 
             if (caseChanges.isEmpty()) {
                 util_closer_Logger.debug('CaseStatusBatch', 'No cases require status updates');
