@@ -309,8 +309,9 @@ public class util_closer_TestDataFactory {
      * @return Batch Log instance (not inserted).
      */
     public static util_closer_Batch_Log__c createBatchLog(String status, Boolean isSimulation) {
+        String randomPart = String.valueOf(Math.abs(Crypto.getRandomInteger())).leftPad(15, '0');
         return new util_closer_Batch_Log__c(
-            Batch_Job_Id__c = '707' + String.valueOf(Math.abs(Crypto.getRandomInteger())).substring(0, 15),
+            Batch_Job_Id__c = '707' + randomPart.substring(0, 15),
             Start_Time__c = DateTime.now().addMinutes(-5),
             End_Time__c = status == 'Running' ? null : DateTime.now(),
             Status__c = status,

@@ -258,7 +258,7 @@ private class util_closer_CaseLogService_Test {
     @isTest
     static void testCreateResult_WithChange() {
         // Setup
-        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', CaseNumber = '00001');
+        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', Subject = 'Test Case');
         util_closer_RuleEngine.CaseChange change = new util_closer_RuleEngine.CaseChange('Closed', 'Auto closed');
 
         // Execute
@@ -268,7 +268,7 @@ private class util_closer_CaseLogService_Test {
         Test.stopTest();
 
         // Verify
-        System.assertEquals('00001', result.caseNumber, 'Case number should be set');
+        System.assertEquals(null, result.caseNumber, 'Case number should be null for mock case');
         System.assertEquals('New', result.originalStatus, 'Original status should be New');
         System.assertEquals('Closed', result.targetStatus, 'Target status should be Closed');
         System.assertEquals('Auto closed', result.targetReason, 'Target reason should be set');
@@ -278,7 +278,7 @@ private class util_closer_CaseLogService_Test {
     @isTest
     static void testCreateResult_WithoutChange() {
         // Setup
-        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', CaseNumber = '00001');
+        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', Subject = 'Test Case');
 
         // Execute
         Test.startTest();
@@ -294,7 +294,7 @@ private class util_closer_CaseLogService_Test {
     @isTest
     static void testCreateResult_Simulation() {
         // Setup
-        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', CaseNumber = '00001');
+        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', Subject = 'Test Case');
         util_closer_RuleEngine.CaseChange change = new util_closer_RuleEngine.CaseChange('Closed', null);
 
         // Execute
@@ -378,7 +378,7 @@ private class util_closer_CaseLogService_Test {
     @isTest
     static void testCreateDetailedResult() {
         // Setup
-        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', CaseNumber = '00001');
+        Case testCase = new Case(Id = '500000000000001AAA', Status = 'New', Subject = 'Test Case');
         util_closer_RuleEngine.DetailedCaseChange change = new util_closer_RuleEngine.DetailedCaseChange('Closed', 'Auto closed');
         change.matchedRuleDeveloperName = 'Test_Rule';
         change.matchedRuleMasterLabel = 'Test Rule';

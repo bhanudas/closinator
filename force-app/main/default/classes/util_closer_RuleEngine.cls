@@ -13,7 +13,7 @@ public with sharing class util_closer_RuleEngine {
     /**
      * @description Wrapper class to hold status and reason changes for a Case.
      */
-    public class CaseChange {
+    public virtual class CaseChange {
         public String newStatus;
         public String reason;
 
@@ -114,7 +114,7 @@ public with sharing class util_closer_RuleEngine {
             allSourceStatuses.addAll(parseStatusList(rule.Source_Status__c));
         }
         
-        String query = 'SELECT Id, Status, LastModifiedDate, CreatedDate ' +
+        String query = 'SELECT Id, CaseNumber, Status, LastModifiedDate, CreatedDate ' +
                        'FROM Case ' +
                        'WHERE IsClosed = false ' +
                        'AND Status IN :sourceStatuses';

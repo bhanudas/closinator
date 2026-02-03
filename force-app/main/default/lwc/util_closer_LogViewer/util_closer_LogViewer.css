@@ -1,0 +1,327 @@
+/* Closinator Log Viewer - Responsive Styles */
+
+/* ===========================================
+   BASE STYLES
+   =========================================== */
+
+.filter-section {
+    background: #f3f3f3;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+lightning-badge {
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+lightning-badge:hover {
+    opacity: 0.85;
+    transform: scale(1.02);
+}
+
+/* ===========================================
+   PANEL STYLES
+   =========================================== */
+
+.panel {
+    background: #fff;
+    border: 1px solid #dddbda;
+    border-radius: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.panel-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dddbda;
+    background: #fafaf9;
+    flex-shrink: 0;
+}
+
+.panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.panel-footer {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid #dddbda;
+    background: #fafaf9;
+    flex-shrink: 0;
+}
+
+.datatable-container {
+    height: 100%;
+}
+
+.datatable-container lightning-datatable {
+    height: 100%;
+}
+
+.case-filter-bar {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #dddbda;
+    background: #fafaf9;
+    flex-shrink: 0;
+}
+
+.loading-more {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* ===========================================
+   MAIN CONTAINER - LARGE SCREENS (>1400px)
+   Side-by-side layout
+   =========================================== */
+
+.main-container {
+    display: flex;
+    gap: 0.75rem;
+    height: calc(100vh - 280px);
+    min-height: 500px;
+}
+
+.batch-panel-container {
+    flex: 1;
+    min-width: 0;
+    transition: flex 0.3s ease;
+}
+
+.batch-panel-container.with-cases {
+    flex: 0 0 45%;
+}
+
+.case-panel-container {
+    flex: 0 0 55%;
+    min-width: 0;
+}
+
+.batch-panel,
+.case-panel {
+    height: 100%;
+}
+
+/* Hide back button on large screens */
+.back-button {
+    display: none;
+}
+
+/* Hide backdrop on large screens */
+.panel-backdrop {
+    display: none;
+}
+
+/* ===========================================
+   MEDIUM SCREENS (1024px - 1400px)
+   Case panel slides over as overlay
+   =========================================== */
+
+@media (max-width: 1400px) {
+    .main-container {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .batch-panel-container {
+        flex: 1 1 100%;
+    }
+    
+    .batch-panel-container.with-cases {
+        flex: 1 1 100%;
+    }
+    
+    .case-panel-container {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 65%;
+        min-width: 500px;
+        max-width: 800px;
+        z-index: 100;
+        animation: slideIn 0.25s ease-out;
+    }
+    
+    .case-panel {
+        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+        max-height: 100%;
+        overflow: hidden;
+    }
+    
+    .case-panel .panel-body {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+    
+    /* No backdrop on medium screens - just the slide-in panel */
+    .panel-backdrop {
+        display: none;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* ===========================================
+   SMALL SCREENS (<1024px)
+   Case panel takes over full screen
+   =========================================== */
+
+@media (max-width: 1024px) {
+    .main-container {
+        height: calc(100vh - 320px);
+        min-height: 400px;
+    }
+    
+    .case-panel-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        z-index: 9000;
+        padding: 0;
+    }
+    
+    .case-panel {
+        border-radius: 0;
+        box-shadow: none;
+        height: 100vh;
+    }
+    
+    .case-panel-body {
+        height: calc(100vh - 200px);
+    }
+    
+    .panel-backdrop {
+        display: none;
+    }
+    
+    /* Show back button, hide close button on mobile */
+    .back-button {
+        display: inline-flex;
+    }
+    
+    .close-button {
+        display: none;
+    }
+    
+    .hide-on-small {
+        display: none;
+    }
+    
+    /* Adjust filter section for mobile */
+    .filter-section {
+        padding: 0.5rem;
+    }
+}
+
+/* ===========================================
+   EXTRA SMALL SCREENS (<768px)
+   =========================================== */
+
+@media (max-width: 768px) {
+    .main-container {
+        height: calc(100vh - 380px);
+        min-height: 350px;
+    }
+    
+    .case-filter-bar .slds-grid {
+        gap: 0.5rem;
+    }
+    
+    .badge-row {
+        font-size: 0.75rem;
+    }
+    
+    .badge-row strong {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* ===========================================
+   COLOR UTILITIES
+   =========================================== */
+
+.slds-text-color_success {
+    color: #2e844a !important;
+}
+
+.slds-text-color_error {
+    color: #c23934 !important;
+}
+
+.slds-text-color_weak {
+    color: #706e6b !important;
+}
+
+/* ===========================================
+   MODAL ADJUSTMENTS
+   =========================================== */
+
+.slds-modal__content pre {
+    background: #f3f2f2;
+    max-height: 200px;
+    overflow: auto;
+}
+
+/* ===========================================
+   SCROLLBAR STYLING
+   =========================================== */
+
+.panel-body::-webkit-scrollbar,
+.datatable-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.panel-body::-webkit-scrollbar-track,
+.datatable-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.panel-body::-webkit-scrollbar-thumb,
+.datatable-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.panel-body::-webkit-scrollbar-thumb:hover,
+.datatable-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Button stretch utility */
+.slds-button_stretch {
+    width: 100%;
+}

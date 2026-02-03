@@ -24,7 +24,7 @@ public without sharing class util_closer_CaseDataAccess {
         // Note: RecordTypeId is available but we query it separately if needed for rule evaluation
         // Include Origin, Owner.Name, and LastModifiedBy.Name for rule filtering
         return Database.getQueryLocator([
-            SELECT Id, Status, LastModifiedDate, CreatedDate, Origin,
+            SELECT Id, CaseNumber, Status, LastModifiedDate, CreatedDate, Origin,
                    Owner.Name, LastModifiedBy.Name
             FROM Case
             WHERE IsClosed = false

@@ -41,7 +41,7 @@
         <type>Default</type>
     </actionOverrides>
     <allowInChatterGroups>false</allowInChatterGroups>
-    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <compactLayoutAssignment>Batch_Log_Compact</compactLayoutAssignment>
     <deploymentStatus>Deployed</deploymentStatus>
     <description>Tracks batch execution logs for the Case Auto-Closer system. One record per batch execution.</description>
     <enableActivities>false</enableActivities>
