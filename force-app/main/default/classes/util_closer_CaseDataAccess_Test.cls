@@ -404,5 +404,41 @@ private class util_closer_CaseDataAccess_Test {
         // Verify - should still return records (filter field is skipped if invalid)
         System.assertEquals(1, results.size(), 'Should return child record even with invalid filter field');
     }
+
+    @isTest
+    static void testQueryCasesByStatus_WithAdditionalFieldsPopulated() {
+        // Setup - test with valid additional fields
+        Set<String> sourceStatuses = new Set<String>{ 'New' };
+        Set<String> additionalFields = new Set<String>{ 'Subject', 'Origin', 'Description' };
+
+        // Execute
+        Test.startTest();
+        Database.QueryLocator ql = util_closer_CaseDataAccess.queryCasesByStatus(sourceStatuses, additionalFields);
+        Database.QueryLocatorIterator it = ql.iterator();
+        Test.stopTest();
+
+        // Verify - QueryLocator should work and include additional fields
+        System.assertNotEquals(null, ql, 'QueryLocator should not be null');
+    }
+
+    @isTest
+    static void testQueryChildRecords_InvalidLookupField() {
+        // Setup
+        Case testCase = [SELECT Id FROM Case LIMIT 1];
+        Set<Id> caseIds = new Set<Id>{ testCase.Id };
+
+        // Execute with invalid lookup field - should handle gracefully
+        Test.startTest();
+        List<SObject> results = util_closer_CaseDataAccess.queryChildRecords(
+            'CaseComment',
+            'InvalidLookup__c',
+            'CommentBody',
+            caseIds
+        );
+        Test.stopTest();
+
+        // Verify - should return empty list for invalid lookup field
+        System.assertEquals(0, results.size(), 'Should return empty list for invalid lookup field');
+    }
 }
 

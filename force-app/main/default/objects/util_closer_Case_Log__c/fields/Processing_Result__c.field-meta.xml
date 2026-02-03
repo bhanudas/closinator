@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Processing_Result__c</fullName>
+    <description>Result of processing this Case</description>
+    <externalId>false</externalId>
+    <label>Processing Result</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Matched</fullName>
+                <default>false</default>
+                <label>Matched</label>
+            </value>
+            <value>
+                <fullName>Not Matched</fullName>
+                <default>false</default>
+                <label>Not Matched</label>
+            </value>
+            <value>
+                <fullName>Updated</fullName>
+                <default>false</default>
+                <label>Updated</label>
+            </value>
+            <value>
+                <fullName>Simulated</fullName>
+                <default>false</default>
+                <label>Simulated</label>
+            </value>
+            <value>
+                <fullName>Failed</fullName>
+                <default>false</default>
+                <label>Failed</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Verbose_Logging_Enabled__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>When enabled, creates detailed case-level logs for each batch execution.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Enable to create detailed Case Log records for analysis. Off by default to conserve storage.</inlineHelpText>
+    <label>Verbose Logging Enabled</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

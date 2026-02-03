@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Failed_Case_Updates</fullName>
+    <columns>NAME</columns>
+    <columns>Batch_Log__c</columns>
+    <columns>Case__c</columns>
+    <columns>Case_Number__c</columns>
+    <columns>Original_Status__c</columns>
+    <columns>Target_Status__c</columns>
+    <columns>Matched_Rule__c</columns>
+    <columns>Error_Message__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Processing_Result__c</field>
+        <operation>equals</operation>
+        <value>Failed</value>
+    </filters>
+    <label>Failed Case Updates</label>
+    <language>en_US</language>
+</ListView>

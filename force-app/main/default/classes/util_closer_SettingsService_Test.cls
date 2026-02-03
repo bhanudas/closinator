@@ -445,5 +445,162 @@ private class util_closer_SettingsService_Test {
         // Verify
         System.assertEquals(false, isSimulation, 'Null simulation mode should return false');
     }
+
+    // ==================== Verbose Logging Tests ====================
+
+    @isTest
+    static void testIsVerboseLoggingEnabled_True() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90);
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isVerboseLoggingEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(true, isEnabled, 'Verbose logging should be enabled');
+    }
+
+    @isTest
+    static void testIsVerboseLoggingEnabled_False() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(false, 90);
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isVerboseLoggingEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isEnabled, 'Verbose logging should be disabled');
+    }
+
+    @isTest
+    static void testIsVerboseLoggingEnabled_Null() {
+        // Setup - null verbose logging should return false
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Verbose_Logging_Enabled__c = null
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isVerboseLoggingEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isEnabled, 'Null verbose logging should return false');
+    }
+
+    @isTest
+    static void testGetLogRetentionDays_CustomValue() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 60);
+
+        // Execute
+        Test.startTest();
+        Integer days = util_closer_SettingsService.getLogRetentionDays();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(60, days, 'Should return custom retention days');
+    }
+
+    @isTest
+    static void testGetLogRetentionDays_DefaultValue() {
+        // Setup - null retention should return default 90
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Log_Retention_Days__c = null
+        );
+
+        // Execute
+        Test.startTest();
+        Integer days = util_closer_SettingsService.getLogRetentionDays();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(90, days, 'Should return default 90 days');
+    }
+
+    @isTest
+    static void testGetLogRetentionDays_ZeroValue() {
+        // Setup - zero retention should return default 90
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Log_Retention_Days__c = 0
+        );
+
+        // Execute
+        Test.startTest();
+        Integer days = util_closer_SettingsService.getLogRetentionDays();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(90, days, 'Zero retention should return default 90 days');
+    }
+
+    @isTest
+    static void testGetLogRetentionDays_NegativeValue() {
+        // Setup - negative retention should return default 90
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Log_Retention_Days__c = -10
+        );
+
+        // Execute
+        Test.startTest();
+        Integer days = util_closer_SettingsService.getLogRetentionDays();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(90, days, 'Negative retention should return default 90 days');
+    }
+
+    @isTest
+    static void testIsLogRuleEvaluationsEnabled_True() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isLogRuleEvaluationsEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(true, isEnabled, 'Log rule evaluations should be enabled');
+    }
+
+    @isTest
+    static void testIsLogRuleEvaluationsEnabled_False() {
+        // Setup
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, false);
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isLogRuleEvaluationsEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isEnabled, 'Log rule evaluations should be disabled');
+    }
+
+    @isTest
+    static void testIsLogRuleEvaluationsEnabled_Null() {
+        // Setup - null should return false
+        util_closer_SettingsService.mockSettings = new util_closer_Settings__c(
+            Is_Active__c = true,
+            Log_Rule_Evaluations__c = null
+        );
+
+        // Execute
+        Test.startTest();
+        Boolean isEnabled = util_closer_SettingsService.isLogRuleEvaluationsEnabled();
+        Test.stopTest();
+
+        // Verify
+        System.assertEquals(false, isEnabled, 'Null log rule evaluations should return false');
+    }
 }
 

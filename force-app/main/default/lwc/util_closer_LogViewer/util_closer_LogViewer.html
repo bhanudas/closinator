@@ -1,0 +1,356 @@
+<template>
+    <lightning-card title="Closinator Log Viewer" icon-name="standard:logging">
+        <div class="slds-p-horizontal_medium">
+            <!-- Filter Bar for Batch Logs - Collapsible on small screens -->
+            <div class="filter-section">
+                <div class="slds-grid slds-wrap slds-gutters_small">
+                    <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-6">
+                        <lightning-combobox
+                            name="statusFilter"
+                            label="Status"
+                            value={batchStatusFilter}
+                            placeholder="All Statuses"
+                            options={statusOptions}
+                            onchange={handleBatchStatusChange}>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-6">
+                        <lightning-combobox
+                            name="modeFilter"
+                            label="Mode"
+                            value={batchModeFilter}
+                            placeholder="All Modes"
+                            options={modeOptions}
+                            onchange={handleBatchModeChange}>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-6">
+                        <lightning-input
+                            type="date"
+                            name="startDate"
+                            label="Start Date"
+                            value={startDate}
+                            onchange={handleStartDateChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-6">
+                        <lightning-input
+                            type="date"
+                            name="endDate"
+                            label="End Date"
+                            value={endDate}
+                            onchange={handleEndDateChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-6">
+                        <div class="slds-grid slds-gutters_x-small">
+                            <div class="slds-col slds-grow">
+                                <lightning-input
+                                    type="search"
+                                    name="searchTerm"
+                                    label="Search"
+                                    placeholder="Search by name or job ID..."
+                                    value={searchTerm}
+                                    onchange={handleSearchChange}>
+                                </lightning-input>
+                            </div>
+                            <div class="slds-col slds-no-flex slds-align-bottom">
+                                <lightning-button
+                                    label="Clear"
+                                    variant="neutral"
+                                    onclick={handleClearFilters}
+                                    class="slds-m-top_medium">
+                                </lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Count Badges -->
+                <div class="slds-m-top_x-small badge-row" if:true={showFilterCounts}>
+                    <span class="slds-m-right_small slds-text-body_small">
+                        <strong>Status:</strong>
+                        <template for:each={statusCountBadges} for:item="badge">
+                            <lightning-badge
+                                key={badge.value}
+                                label={badge.label}
+                                class={badge.class}
+                                onclick={handleStatusBadgeClick}
+                                data-value={badge.value}>
+                            </lightning-badge>
+                        </template>
+                    </span>
+                    <span class="slds-m-left_medium slds-text-body_small">
+                        <strong>Mode:</strong>
+                        <template for:each={modeCountBadges} for:item="badge">
+                            <lightning-badge
+                                key={badge.value}
+                                label={badge.label}
+                                class={badge.class}
+                                onclick={handleModeBadgeClick}
+                                data-value={badge.value}>
+                            </lightning-badge>
+                        </template>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class={mainContainerClass}>
+                <!-- Batch Logs Panel -->
+                <div class={batchPanelClass}>
+                    <div class="panel batch-panel">
+                        <div class="panel-header">
+                            <h2 class="slds-text-heading_small slds-truncate">
+                                Batch Logs
+                                <span class="slds-badge slds-m-left_x-small">{totalBatchRecords}</span>
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <template if:true={isBatchLoading}>
+                                <div class="slds-align_absolute-center" style="height: 200px;">
+                                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                                </div>
+                            </template>
+                            <template if:false={isBatchLoading}>
+                                <div class="datatable-container">
+                                    <lightning-datatable
+                                        key-field="Id"
+                                        data={batchLogs}
+                                        columns={batchColumns}
+                                        sorted-by={batchSortField}
+                                        sorted-direction={batchSortDirection}
+                                        onsort={handleBatchSort}
+                                        onrowaction={handleBatchRowAction}
+                                        hide-checkbox-column
+                                        show-row-number-column>
+                                    </lightning-datatable>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="panel-footer">
+                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                <span class="slds-text-body_small">
+                                    Page {batchPageNumber} of {batchTotalPages}
+                                </span>
+                                <lightning-button-group>
+                                    <lightning-button
+                                        label="Previous"
+                                        disabled={isBatchFirstPage}
+                                        onclick={handleBatchPreviousPage}>
+                                    </lightning-button>
+                                    <lightning-button
+                                        label="Next"
+                                        disabled={isBatchLastPage}
+                                        onclick={handleBatchNextPage}>
+                                    </lightning-button>
+                                </lightning-button-group>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Logs Panel - Overlay on smaller screens -->
+                <template if:true={showCaseLogs}>
+                    <div class={casePanelClass}>
+                        <!-- Backdrop for overlay mode -->
+                        <div class="panel-backdrop" onclick={handleCloseCasePanel}></div>
+                        
+                        <div class="panel case-panel">
+                            <div class="panel-header">
+                                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                    <div class="slds-grid slds-grid_vertical-align-center slds-truncate">
+                                        <!-- Back button for mobile -->
+                                        <lightning-button-icon
+                                            icon-name="utility:back"
+                                            alternative-text="Back"
+                                            title="Back to batch logs"
+                                            onclick={handleCloseCasePanel}
+                                            class="back-button slds-m-right_small">
+                                        </lightning-button-icon>
+                                        <h2 class="slds-text-heading_small slds-truncate">
+                                            <span class="hide-on-small">Case Logs for </span>{selectedBatchName}
+                                            <span class="slds-badge slds-m-left_x-small">{totalCaseRecords}</span>
+                                        </h2>
+                                    </div>
+                                    <div class="slds-shrink-none">
+                                        <lightning-button-icon
+                                            icon-name="utility:download"
+                                            alternative-text="Export CSV"
+                                            title="Export to CSV"
+                                            onclick={handleExportCsv}
+                                            class="slds-m-right_x-small">
+                                        </lightning-button-icon>
+                                        <lightning-button-icon
+                                            icon-name="utility:close"
+                                            alternative-text="Close"
+                                            title="Close panel"
+                                            onclick={handleCloseCasePanel}
+                                            class="close-button">
+                                        </lightning-button-icon>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Case Log Filters -->
+                            <div class="case-filter-bar">
+                                <div class="slds-grid slds-wrap slds-gutters_x-small">
+                                    <div class="slds-col slds-size_1-of-2 slds-medium-size_3-of-12">
+                                        <lightning-combobox
+                                            name="caseResultFilter"
+                                            value={caseResultFilter}
+                                            placeholder="All Results"
+                                            options={resultOptions}
+                                            onchange={handleCaseResultChange}
+                                            variant="label-hidden">
+                                        </lightning-combobox>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2 slds-medium-size_3-of-12">
+                                        <lightning-combobox
+                                            name="caseRuleFilter"
+                                            value={caseRuleFilter}
+                                            placeholder="All Rules"
+                                            options={ruleOptions}
+                                            onchange={handleCaseRuleChange}
+                                            variant="label-hidden">
+                                        </lightning-combobox>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12">
+                                        <lightning-input
+                                            type="search"
+                                            name="caseSearchTerm"
+                                            placeholder="Search cases..."
+                                            value={caseSearchTerm}
+                                            onchange={handleCaseSearchChange}
+                                            variant="label-hidden">
+                                        </lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+                                        <lightning-button
+                                            label="Clear"
+                                            variant="neutral"
+                                            onclick={handleClearCaseFilters}
+                                            class="slds-button_stretch">
+                                        </lightning-button>
+                                    </div>
+                                </div>
+                                <!-- Result count badges -->
+                                <div class="slds-m-top_x-small badge-row" if:true={showResultCounts}>
+                                    <template for:each={resultCountBadges} for:item="badge">
+                                        <lightning-badge
+                                            key={badge.value}
+                                            label={badge.label}
+                                            class={badge.class}
+                                            onclick={handleResultBadgeClick}
+                                            data-value={badge.value}>
+                                        </lightning-badge>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="panel-body case-panel-body">
+                                <template if:true={isCaseLoading}>
+                                    <div class="slds-align_absolute-center" style="height: 200px;">
+                                        <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                                    </div>
+                                </template>
+                                <template if:false={isCaseLoading}>
+                                    <div class="datatable-container">
+                                        <lightning-datatable
+                                            key-field="Id"
+                                            data={caseLogs}
+                                            columns={caseColumns}
+                                            sorted-by={caseSortField}
+                                            sorted-direction={caseSortDirection}
+                                            onsort={handleCaseSort}
+                                            onrowaction={handleCaseRowAction}
+                                            hide-checkbox-column
+                                            enable-infinite-loading={enableInfiniteLoading}
+                                            onloadmore={handleLoadMoreCases}>
+                                        </lightning-datatable>
+                                    </div>
+                                </template>
+                                <template if:true={isLoadingMore}>
+                                    <div class="slds-align_absolute-center slds-p-around_small loading-more">
+                                        <lightning-spinner alternative-text="Loading more" size="small"></lightning-spinner>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="panel-footer">
+                                <span class="slds-text-body_small">
+                                    Showing {caseLogsDisplayed} of {totalCaseRecords} records
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </lightning-card>
+
+    <!-- Case Detail Modal -->
+    <template if:true={showCaseDetailModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open slds-modal_medium">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning-button-icon
+                        icon-name="utility:close"
+                        alternative-text="Close"
+                        onclick={closeCaseDetailModal}
+                        class="slds-modal__close">
+                    </lightning-button-icon>
+                    <h2 class="slds-text-heading_medium slds-truncate">Case Log Details - {selectedCaseLog.Name}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-around_x-small">
+                            <dl class="slds-list_horizontal slds-wrap">
+                                <dt class="slds-item_label slds-text-color_weak">Case Number:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Case_Number__c}</dd>
+                                <dt class="slds-item_label slds-text-color_weak">Original Status:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Original_Status__c}</dd>
+                                <dt class="slds-item_label slds-text-color_weak">Target Status:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Target_Status__c}</dd>
+                                <dt class="slds-item_label slds-text-color_weak">Processing Result:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Processing_Result__c}</dd>
+                            </dl>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-around_x-small">
+                            <dl class="slds-list_horizontal slds-wrap">
+                                <dt class="slds-item_label slds-text-color_weak">Matched Rule:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Matched_Rule_Label__c}</dd>
+                                <dt class="slds-item_label slds-text-color_weak">Rules Evaluated:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Rules_Evaluated_Count__c}</dd>
+                                <dt class="slds-item_label slds-text-color_weak">Processing Time:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Processing_Time_Ms__c} ms</dd>
+                                <dt class="slds-item_label slds-text-color_weak">Batch Chunk:</dt>
+                                <dd class="slds-item_detail">{selectedCaseLog.Batch_Chunk_Number__c}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <template if:true={selectedCaseLog.Error_Message__c}>
+                        <div class="slds-m-top_small slds-box slds-box_x-small slds-theme_error">
+                            <strong>Error:</strong> {selectedCaseLog.Error_Message__c}
+                        </div>
+                    </template>
+                    <template if:true={selectedCaseLog.Rule_Evaluation_Details__c}>
+                        <div class="slds-m-top_small">
+                            <strong>Rule Evaluation Details:</strong>
+                            <pre class="slds-box slds-box_x-small slds-m-top_x-small" style="white-space: pre-wrap; font-size: 12px;">{selectedCaseLog.Rule_Evaluation_Details__c}</pre>
+                        </div>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={closeCaseDetailModal}></lightning-button>
+                    <lightning-button
+                        label="View Case"
+                        variant="brand"
+                        onclick={handleViewCase}
+                        if:true={selectedCaseLog.Case__c}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

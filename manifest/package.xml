@@ -6,31 +6,7 @@
     </types>
     <types>
         <members>*</members>
-        <name>ApexComponent</name>
-    </types>
-    <types>
-        <members>*</members>
-        <name>ApexPage</name>
-    </types>
-    <types>
-        <members>*</members>
-        <name>ApexTestSuite</name>
-    </types>
-    <types>
-        <members>*</members>
-        <name>ApexTrigger</name>
-    </types>
-    <types>
-        <members>*</members>
-        <name>AuraDefinitionBundle</name>
-    </types>
-    <types>
-        <members>*</members>
         <name>LightningComponentBundle</name>
-    </types>
-    <types>
-        <members>*</members>
-        <name>StaticResource</name>
     </types>
     <types>
         <members>*</members>
@@ -38,6 +14,8 @@
     </types>
     <types>
         <members>util_closer_Case_Status_Rule__mdt</members>
+        <members>util_closer_Batch_Log__c</members>
+        <members>util_closer_Case_Log__c</members>
         <members>util_closer_Settings__c</members>
         <name>CustomObject</name>
     </types>
@@ -64,6 +42,10 @@
     <types>
         <members>*</members>
         <name>ListView</name>
+    </types>
+    <types>
+        <members>*</members>
+        <name>CompactLayout</name>
     </types>
     <version>64.0</version>
 </Package>

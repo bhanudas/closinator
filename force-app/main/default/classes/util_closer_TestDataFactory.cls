@@ -299,5 +299,86 @@ public class util_closer_TestDataFactory {
             PermissionSetId = ps.Id
         );
     }
+
+    // ==================== Batch Log Creation ====================
+
+    /**
+     * @description Creates a batch log record for testing.
+     * @param status The batch log status.
+     * @param isSimulation Whether this is a simulation execution.
+     * @return Batch Log instance (not inserted).
+     */
+    public static util_closer_Batch_Log__c createBatchLog(String status, Boolean isSimulation) {
+        String randomPart = String.valueOf(Math.abs(Crypto.getRandomInteger())).leftPad(15, '0');
+        return new util_closer_Batch_Log__c(
+            Batch_Job_Id__c = '707' + randomPart.substring(0, 15),
+            Start_Time__c = DateTime.now().addMinutes(-5),
+            End_Time__c = status == 'Running' ? null : DateTime.now(),
+            Status__c = status,
+            Execution_Mode__c = isSimulation ? 'Simulation' : 'Full',
+            Total_Records_Processed__c = 100,
+            Total_Records_Matched__c = 50,
+            Total_Records_Updated__c = 45,
+            Total_Records_Failed__c = 5,
+            Total_Batches_Executed__c = 2,
+            Active_Rules_Count__c = 3,
+            Active_Rules_JSON__c = '[{"developerName":"Rule1","masterLabel":"Rule 1"}]',
+            Status_Transitions_JSON__c = '{"New -> Closed": 45}',
+            Running_User__c = UserInfo.getUserId()
+        );
+    }
+
+    /**
+     * @description Creates multiple case log records for testing.
+     * @param batchLogId The parent batch log Id.
+     * @param count Number of case logs to create.
+     * @param processingResult The processing result value.
+     * @return List of Case Log instances (not inserted).
+     */
+    public static List<util_closer_Case_Log__c> createCaseLogs(Id batchLogId, Integer count, String processingResult) {
+        List<util_closer_Case_Log__c> logs = new List<util_closer_Case_Log__c>();
+        for (Integer i = 0; i < count; i++) {
+            logs.add(new util_closer_Case_Log__c(
+                Batch_Log__c = batchLogId,
+                Case_Number__c = '0000' + i,
+                Original_Status__c = 'New',
+                Target_Status__c = processingResult == 'Not Matched' ? null : 'Closed',
+                Processing_Result__c = processingResult,
+                Matched_Rule__c = processingResult == 'Not Matched' ? null : 'Test_Rule',
+                Matched_Rule_Label__c = processingResult == 'Not Matched' ? null : 'Test Rule',
+                Rules_Evaluated_Count__c = 3,
+                Child_Records_Checked__c = false,
+                Child_Records_Found__c = 0,
+                Processing_Time_Ms__c = 10,
+                Batch_Chunk_Number__c = 1
+            ));
+        }
+        return logs;
+    }
+
+    /**
+     * @description Creates settings with verbose logging configuration.
+     * @param verboseLogging Verbose logging enabled flag.
+     * @param retentionDays Log retention days.
+     * @return Settings instance (not inserted).
+     */
+    public static util_closer_Settings__c createSettingsWithLogging(Boolean verboseLogging, Integer retentionDays) {
+        return createSettingsWithLogging(verboseLogging, retentionDays, false);
+    }
+
+    /**
+     * @description Creates settings with full logging configuration.
+     * @param verboseLogging Verbose logging enabled flag.
+     * @param retentionDays Log retention days.
+     * @param logRuleEvaluations Log rule evaluations flag.
+     * @return Settings instance (not inserted).
+     */
+    public static util_closer_Settings__c createSettingsWithLogging(Boolean verboseLogging, Integer retentionDays, Boolean logRuleEvaluations) {
+        util_closer_Settings__c settings = createDefaultSettings();
+        settings.Verbose_Logging_Enabled__c = verboseLogging;
+        settings.Log_Retention_Days__c = retentionDays;
+        settings.Log_Rule_Evaluations__c = logRuleEvaluations;
+        return settings;
+    }
 }
 

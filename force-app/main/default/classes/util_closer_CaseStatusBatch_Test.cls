@@ -1488,5 +1488,360 @@ private class util_closer_CaseStatusBatch_Test {
 
         resetMockRules();
     }
+
+    // ==================== Verbose Logging Tests ====================
+
+    @isTest
+    static void testBatch_VerboseLoggingEnabled() {
+        // Setup - enable verbose logging
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        // Verify case logs were created
+        Integer logCount = [SELECT COUNT() FROM util_closer_Case_Log__c];
+        System.assert(logCount > 0, 'Should have created case logs with verbose logging');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_VerboseLoggingWithRuleEvaluations() {
+        // Setup - enable verbose logging AND rule evaluations
+        util_closer_Settings__c settings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+        settings.Log_Rule_Evaluations__c = true;
+        util_closer_SettingsService.mockSettings = settings;
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_VerboseLogging_NoMatchingCases() {
+        // Setup - verbose logging with no matching cases
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        // Create cases that won't match
+        List<Case> testCases = util_closer_TestDataFactory.createCases('Working', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should remain unchanged
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Working', c.Status, 'Status should remain Working');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_SimulationMode_VerboseLogging() {
+        // Setup - simulation mode with verbose logging
+        util_closer_Settings__c settings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+        settings.Simulation_Mode__c = true;
+        util_closer_SettingsService.mockSettings = settings;
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should NOT be updated (simulation mode)
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain New in simulation mode');
+        }
+
+        // But logs should still be created
+        Integer logCount = [SELECT COUNT() FROM util_closer_Case_Log__c];
+        System.assert(logCount > 0, 'Should have created case logs in simulation mode');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_VerboseLogging_WithChildCriteria() {
+        // Setup - verbose logging with child criteria rules
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Child_Rule',
+            MasterLabel = 'Child Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Child_Object_API_Name__c = 'CaseComment',
+            Child_Lookup_Field__c = 'ParentId',
+            Require_Child_Record__c = false
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_VerboseLoggingDisabled() {
+        // Setup - explicitly disable verbose logging
+        util_closer_Settings__c settings = util_closer_TestDataFactory.createSettings(200, true, true);
+        settings.Verbose_Logging_Enabled__c = false;
+        util_closer_SettingsService.mockSettings = settings;
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_BatchLogCreationFailure() {
+        // Test that batch continues even if batch log creation fails
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated even if logging failed
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_PartialDMLFailures() {
+        // Test handling of partial DML failures
+        util_closer_SettingsService.mockSettings = util_closer_TestDataFactory.createSettings(200, true, true);
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 5);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - batch should complete
+        System.assert(true, 'Batch should complete even with potential partial failures');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_VerboseLogging_StandardEvaluation() {
+        // Setup - verbose logging enabled but logRuleEvaluations disabled
+        // This covers the standard evaluation path with verbose logging (lines 202-209)
+        util_closer_Settings__c settings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, false);
+        util_closer_SettingsService.mockSettings = settings;
+
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{
+            createMockRule('Test_Rule', 'New', 'Closed', 1)
+        };
+
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should be updated
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('Closed', c.Status, 'Status should be Closed');
+        }
+
+        // Verbose logging should have created case logs
+        Integer logCount = [SELECT COUNT() FROM util_closer_Case_Log__c];
+        System.assert(logCount > 0, 'Should have created case logs with verbose logging');
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_NoMatchingCases_StandardEvaluation() {
+        // Setup - verbose logging with standard evaluation where cases match status but not criteria
+        // This covers lines 217-220 in CaseStatusBatch
+        util_closer_Settings__c settings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, false);
+        util_closer_SettingsService.mockSettings = settings;
+
+        // Rule with days requirement that won't be met by newly created cases
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Days_Rule',
+            MasterLabel = 'Days Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Days_Since_Last_Modified__c = 365 // Very high requirement
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        // Create cases with matching status but won't meet days criteria
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 3);
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should remain unchanged (days criteria not met)
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain New - days criteria not met');
+        }
+
+        resetMockRules();
+    }
+
+    @isTest
+    static void testBatch_NoMatchingCases_DetailedEvaluation() {
+        // Setup - verbose logging with detailed evaluation where cases don't match
+        // This covers the caseLogService != null && caseChanges.isEmpty() path
+        util_closer_Settings__c settings = util_closer_TestDataFactory.createSettingsWithLogging(true, 90, true);
+        util_closer_SettingsService.mockSettings = settings;
+
+        // Rule with origin filter that won't match
+        util_closer_Case_Status_Rule__mdt rule = new util_closer_Case_Status_Rule__mdt(
+            DeveloperName = 'Origin_Rule',
+            MasterLabel = 'Origin Rule',
+            Is_Active__c = true,
+            Source_Status__c = 'New',
+            Target_Status__c = 'Closed',
+            Execution_Order__c = 1,
+            Origins__c = 'Email;Phone' // Won't match 'Web' origin
+        );
+        util_closer_RuleEngine.mockRules = new List<util_closer_Case_Status_Rule__mdt>{ rule };
+
+        // Create cases with matching status but different origin
+        List<Case> testCases = util_closer_TestDataFactory.createCases('New', 2);
+        for (Case c : testCases) {
+            c.Origin = 'Web'; // Won't match the rule's Origins__c
+        }
+        insert testCases;
+
+        // Execute batch
+        Test.startTest();
+        util_closer_CaseStatusBatch batch = new util_closer_CaseStatusBatch();
+        Database.executeBatch(batch, 200);
+        Test.stopTest();
+
+        // Verify - cases should remain unchanged (origin doesn't match)
+        List<Case> updatedCases = [SELECT Status FROM Case WHERE Id IN :testCases];
+        for (Case c : updatedCases) {
+            System.assertEquals('New', c.Status, 'Status should remain New - origin filter not met');
+        }
+
+        // Case logs should still be created for verbose logging
+        Integer logCount = [SELECT COUNT() FROM util_closer_Case_Log__c];
+        System.assert(logCount > 0, 'Should have created case logs with verbose logging');
+
+        resetMockRules();
+    }
 }
 

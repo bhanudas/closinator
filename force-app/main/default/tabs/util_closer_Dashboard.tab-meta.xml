@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Unified Closinator Dashboard - Schedule, Monitor, and View Logs</description>
+    <flexiPage>util_closer_Dashboard</flexiPage>
+    <frameHeight>600</frameHeight>
+    <hasSidebar>false</hasSidebar>
+    <label>Closinator</label>
+    <motif>Custom72: Alarm Clock</motif>
+</CustomTab>

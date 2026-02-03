@@ -11,6 +11,11 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
     private String autoCloseReasonField;
     private Boolean simulationMode;
 
+    // Verbose logging state
+    private Boolean verboseLoggingEnabled;
+    private Boolean logRuleEvaluations;
+    private util_closer_Batch_Log__c batchLog;
+
     /**
      * @description Constructor initializes metrics and loads rules.
      */
@@ -21,6 +26,9 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
         this.autoCloseReasonEnabled = util_closer_SettingsService.isAutoCloseReasonEnabled();
         this.autoCloseReasonField = util_closer_SettingsService.getAutoCloseReasonField();
         this.simulationMode = util_closer_SettingsService.isSimulationMode();
+        this.verboseLoggingEnabled = util_closer_SettingsService.isVerboseLoggingEnabled();
+        this.logRuleEvaluations = util_closer_SettingsService.isLogRuleEvaluationsEnabled();
+
         util_closer_Logger.debug('CaseStatusBatch', 'Batch initialized with ' + this.rules.size() + ' active rules');
         if (this.simulationMode) {
             util_closer_Logger.debug('CaseStatusBatch', '*** SIMULATION MODE ENABLED - No records will be updated ***');
@@ -28,8 +36,11 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
         if (this.autoCloseReasonEnabled) {
             util_closer_Logger.debug('CaseStatusBatch', 'Auto Close Reason enabled, target field: ' + this.autoCloseReasonField);
         }
+        if (this.verboseLoggingEnabled) {
+            util_closer_Logger.debug('CaseStatusBatch', 'Verbose logging enabled');
+        }
     }
-    
+
     /**
      * @description Start method builds and executes query for Cases to process.
      * Uses CaseDataAccess class to query without sharing restrictions, allowing
@@ -39,6 +50,19 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
      */
     public Database.QueryLocator start(Database.BatchableContext bc) {
         util_closer_Logger.debug('CaseStatusBatch', 'Batch job started: ' + bc.getJobId());
+
+        // Create batch log at start
+        try {
+            this.batchLog = util_closer_BatchLogService.createBatchLog(
+                bc.getJobId(),
+                this.rules,
+                this.simulationMode
+            );
+            util_closer_Logger.debug('CaseStatusBatch', 'Created batch log: ' + this.batchLog.Id);
+        } catch (Exception ex) {
+            util_closer_Logger.error('Failed to create batch log', ex);
+            // Continue without batch logging - don't fail the entire batch
+        }
 
         // Check if system is active
         if (!util_closer_SettingsService.isActive()) {
@@ -118,7 +142,7 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
 
         util_closer_Logger.debug('CaseStatusBatch', 'Auto Close Reason field validated: ' + fieldApiName);
     }
-    
+
     /**
      * @description Execute method processes each batch of Cases.
      * @param bc The batchable context.
@@ -130,6 +154,12 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
         this.metrics.incrementBatchCount();
         this.metrics.addProcessedCount(scope.size());
 
+        // Initialize case log service for verbose logging
+        util_closer_CaseLogService caseLogService = null;
+        if (this.verboseLoggingEnabled && this.batchLog != null) {
+            caseLogService = new util_closer_CaseLogService(this.batchLog.Id, this.metrics.totalBatchesExecuted);
+        }
+
         try {
             // Pre-fetch child records if any rules have child criteria
             Map<Id, List<SObject>> childDataMap = null;
@@ -137,11 +167,58 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
                 childDataMap = fetchChildRecordsForBatch(scope);
             }
 
-            // Evaluate cases against rules (with child data if available)
-            Map<Id, util_closer_RuleEngine.CaseChange> caseChanges = util_closer_RuleEngine.evaluateCases(scope, this.rules, childDataMap);
+            // Track case evaluation results for verbose logging
+            Map<Id, util_closer_CaseLogService.CaseEvaluationResult> caseResults =
+                new Map<Id, util_closer_CaseLogService.CaseEvaluationResult>();
+
+            // Evaluate cases against rules
+            Map<Id, util_closer_RuleEngine.CaseChange> caseChanges;
+
+            if (this.verboseLoggingEnabled && this.logRuleEvaluations) {
+                // Use detailed evaluation for verbose logging
+                Map<Id, util_closer_RuleEngine.DetailedCaseChange> detailedChanges =
+                    util_closer_RuleEngine.evaluateCasesWithDetails(scope, this.rules, childDataMap, true);
+
+                // Convert to standard CaseChange map and create evaluation results
+                caseChanges = new Map<Id, util_closer_RuleEngine.CaseChange>();
+                for (Case c : scope) {
+                    Long startTime = System.currentTimeMillis();
+                    util_closer_RuleEngine.DetailedCaseChange detailedChange = detailedChanges.get(c.Id);
+
+                    util_closer_CaseLogService.CaseEvaluationResult result =
+                        util_closer_CaseLogService.createDetailedResult(c, detailedChange, this.simulationMode);
+                    result.processingTimeMs = System.currentTimeMillis() - startTime;
+                    caseResults.put(c.Id, result);
+
+                    if (detailedChange != null) {
+                        caseChanges.put(c.Id, detailedChange);
+                    }
+                }
+            } else {
+                // Standard evaluation
+                caseChanges = util_closer_RuleEngine.evaluateCases(scope, this.rules, childDataMap);
+
+                // Create basic evaluation results for verbose logging
+                if (this.verboseLoggingEnabled) {
+                    for (Case c : scope) {
+                        util_closer_RuleEngine.CaseChange change = caseChanges.get(c.Id);
+                        util_closer_CaseLogService.CaseEvaluationResult result =
+                            util_closer_CaseLogService.createResult(c, change, this.simulationMode);
+                        caseResults.put(c.Id, result);
+                    }
+                }
+            }
 
             if (caseChanges.isEmpty()) {
                 util_closer_Logger.debug('CaseStatusBatch', 'No cases require status updates');
+
+                // Log all cases as not matched if verbose logging is enabled
+                if (caseLogService != null) {
+                    for (util_closer_CaseLogService.CaseEvaluationResult result : caseResults.values()) {
+                        caseLogService.logCaseEvaluation(result);
+                    }
+                    caseLogService.flushLogs();
+                }
                 return;
             }
 
@@ -186,6 +263,14 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
                     // Record as "simulated success" for metrics
                     this.metrics.recordSuccess(originalStatus, c.Status);
                 }
+
+                // Log simulated results
+                if (caseLogService != null) {
+                    for (util_closer_CaseLogService.CaseEvaluationResult result : caseResults.values()) {
+                        caseLogService.logCaseEvaluation(result);
+                    }
+                    caseLogService.flushLogs();
+                }
                 return;
             }
 
@@ -200,6 +285,11 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
                 if (sr.isSuccess()) {
                     String originalStatus = originalStatuses.get(updatedCase.Id);
                     this.metrics.recordSuccess(originalStatus, updatedCase.Status);
+
+                    // Update case log result
+                    if (caseResults.containsKey(updatedCase.Id)) {
+                        util_closer_CaseLogService.markAsUpdated(caseResults.get(updatedCase.Id));
+                    }
                 } else {
                     String errorMsg = '';
                     for (Database.Error err : sr.getErrors()) {
@@ -207,15 +297,37 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
                     }
                     this.metrics.recordFailure(errorMsg, updatedCase.Id);
                     util_closer_Logger.error('Failed to update Case ' + updatedCase.Id + ': ' + errorMsg);
+
+                    // Update case log result
+                    if (caseResults.containsKey(updatedCase.Id)) {
+                        util_closer_CaseLogService.markAsFailed(caseResults.get(updatedCase.Id), errorMsg);
+                    }
                 }
+            }
+
+            // Log all case results
+            if (caseLogService != null) {
+                for (util_closer_CaseLogService.CaseEvaluationResult result : caseResults.values()) {
+                    caseLogService.logCaseEvaluation(result);
+                }
+                caseLogService.flushLogs();
             }
 
         } catch (Exception ex) {
             util_closer_Logger.error('Exception in batch execute', ex);
             this.metrics.recordFailure(ex.getMessage(), null);
+
+            // Flush any pending case logs
+            if (caseLogService != null) {
+                try {
+                    caseLogService.flushLogs();
+                } catch (Exception flushEx) {
+                    util_closer_Logger.debug('CaseStatusBatch', 'Failed to flush case logs: ' + flushEx.getMessage());
+                }
+            }
         }
     }
-    
+
     /**
      * @description Finish method sends notifications and logs completion.
      * @param bc The batchable context.
@@ -238,6 +350,16 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
             this.metrics.simulationMode = true;
         }
 
+        // Finalize batch log
+        if (this.batchLog != null) {
+            try {
+                util_closer_BatchLogService.finalizeBatchLog(this.batchLog, this.metrics);
+                util_closer_Logger.debug('CaseStatusBatch', 'Finalized batch log: ' + this.batchLog.Id);
+            } catch (Exception ex) {
+                util_closer_Logger.error('Failed to finalize batch log', ex);
+            }
+        }
+
         // Send completion report
         util_closer_NotificationService.sendCompletionReport(this.metrics);
 
@@ -251,4 +373,3 @@ public with sharing class util_closer_CaseStatusBatch implements Database.Batcha
         }
     }
 }
-

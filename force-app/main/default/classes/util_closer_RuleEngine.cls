@@ -13,13 +13,50 @@ public with sharing class util_closer_RuleEngine {
     /**
      * @description Wrapper class to hold status and reason changes for a Case.
      */
-    public class CaseChange {
+    public virtual class CaseChange {
         public String newStatus;
         public String reason;
 
         public CaseChange(String newStatus, String reason) {
             this.newStatus = newStatus;
             this.reason = reason;
+        }
+    }
+
+    /**
+     * @description Extended wrapper class with detailed evaluation information.
+     */
+    public class DetailedCaseChange extends CaseChange {
+        public String matchedRuleDeveloperName;
+        public String matchedRuleMasterLabel;
+        public Integer rulesEvaluatedCount;
+        public List<RuleEvaluationDetail> ruleEvaluations;
+        public Boolean childRecordsChecked;
+        public Integer childRecordsFound;
+
+        public DetailedCaseChange(String newStatus, String reason) {
+            super(newStatus, reason);
+            this.rulesEvaluatedCount = 0;
+            this.ruleEvaluations = new List<RuleEvaluationDetail>();
+            this.childRecordsChecked = false;
+            this.childRecordsFound = 0;
+        }
+    }
+
+    /**
+     * @description Wrapper class for individual rule evaluation details.
+     */
+    public class RuleEvaluationDetail {
+        public String ruleDeveloperName;
+        public String ruleMasterLabel;
+        public Boolean matched;
+        public String failureReason;
+
+        public RuleEvaluationDetail(String developerName, String masterLabel, Boolean matched, String failureReason) {
+            this.ruleDeveloperName = developerName;
+            this.ruleMasterLabel = masterLabel;
+            this.matched = matched;
+            this.failureReason = failureReason;
         }
     }
 
@@ -77,7 +114,7 @@ public with sharing class util_closer_RuleEngine {
             allSourceStatuses.addAll(parseStatusList(rule.Source_Status__c));
         }
         
-        String query = 'SELECT Id, Status, LastModifiedDate, CreatedDate ' +
+        String query = 'SELECT Id, CaseNumber, Status, LastModifiedDate, CreatedDate ' +
                        'FROM Case ' +
                        'WHERE IsClosed = false ' +
                        'AND Status IN :sourceStatuses';
@@ -136,6 +173,205 @@ public with sharing class util_closer_RuleEngine {
         util_closer_Logger.debug('RuleEngine', 'Evaluated ' + cases.size() + ' cases, ' + caseChanges.size() + ' require updates');
 
         return caseChanges;
+    }
+
+    /**
+     * @description Evaluates cases against rules with detailed evaluation information.
+     * Returns DetailedCaseChange objects that include per-rule evaluation details.
+     * @param cases List of cases to evaluate.
+     * @param rules List of rules to apply.
+     * @param childDataMap Map of Case ID to list of child records (null if no child criteria).
+     * @param logRuleEvaluations Whether to include detailed per-rule evaluation results.
+     * @return Map of CaseId to DetailedCaseChange containing evaluation details.
+     */
+    public static Map<Id, DetailedCaseChange> evaluateCasesWithDetails(
+        List<Case> cases,
+        List<util_closer_Case_Status_Rule__mdt> rules,
+        Map<Id, List<SObject>> childDataMap,
+        Boolean logRuleEvaluations
+    ) {
+        Map<Id, DetailedCaseChange> caseChanges = new Map<Id, DetailedCaseChange>();
+
+        for (Case c : cases) {
+            List<SObject> childRecords = (childDataMap != null && childDataMap.containsKey(c.Id))
+                ? childDataMap.get(c.Id)
+                : new List<SObject>();
+            DetailedCaseChange change = evaluateCaseAgainstRulesWithDetails(c, rules, childRecords, logRuleEvaluations);
+            if (change != null) {
+                caseChanges.put(c.Id, change);
+            }
+        }
+
+        util_closer_Logger.debug('RuleEngine', 'Evaluated (detailed) ' + cases.size() + ' cases, ' + caseChanges.size() + ' require updates');
+
+        return caseChanges;
+    }
+
+    /**
+     * @description Evaluates a single case against all rules with detailed tracking.
+     * @param c The case to evaluate.
+     * @param rules The rules to apply.
+     * @param childRecords List of child records for this case.
+     * @param logRuleEvaluations Whether to track per-rule evaluation details.
+     * @return DetailedCaseChange with evaluation details if a rule matches, null otherwise.
+     */
+    private static DetailedCaseChange evaluateCaseAgainstRulesWithDetails(
+        Case c,
+        List<util_closer_Case_Status_Rule__mdt> rules,
+        List<SObject> childRecords,
+        Boolean logRuleEvaluations
+    ) {
+        DetailedCaseChange result = new DetailedCaseChange(null, null);
+        result.childRecordsChecked = !childRecords.isEmpty() || rulesHaveChildCriteria(rules);
+        result.childRecordsFound = childRecords.size();
+
+        for (util_closer_Case_Status_Rule__mdt rule : rules) {
+            result.rulesEvaluatedCount++;
+            String failureReason = getRuleFailureReason(c, rule, childRecords);
+
+            if (logRuleEvaluations) {
+                result.ruleEvaluations.add(new RuleEvaluationDetail(
+                    rule.DeveloperName,
+                    rule.MasterLabel,
+                    failureReason == null,
+                    failureReason
+                ));
+            }
+
+            if (failureReason == null) {
+                // Rule matched
+                util_closer_Logger.debug('RuleEngine', 'Case ' + c.Id + ' matches rule ' + rule.DeveloperName);
+                result.newStatus = rule.Target_Status__c;
+                result.reason = rule.Target_Reason__c;
+                result.matchedRuleDeveloperName = rule.DeveloperName;
+                result.matchedRuleMasterLabel = rule.MasterLabel;
+                return result;
+            }
+        }
+
+        // No rule matched - return null to indicate no change needed
+        return null;
+    }
+
+    /**
+     * @description Gets the reason why a rule didn't match for a case.
+     * @param c The case to check.
+     * @param rule The rule to match against.
+     * @param childRecords List of child records for this case.
+     * @return Null if rule matches, otherwise a string describing why it didn't match.
+     */
+    @TestVisible
+    private static String getRuleFailureReason(Case c, util_closer_Case_Status_Rule__mdt rule, List<SObject> childRecords) {
+        // Check source status
+        Set<String> sourceStatuses = parseStatusList(rule.Source_Status__c);
+        if (!sourceStatuses.contains(c.Status)) {
+            return 'Status mismatch: Case status "' + c.Status + '" not in rule source statuses';
+        }
+
+        // Check days since last modified
+        if (rule.Days_Since_Last_Modified__c != null) {
+            Integer daysSinceModified = getDaysSince(c.LastModifiedDate);
+            if (daysSinceModified < rule.Days_Since_Last_Modified__c) {
+                return 'Days since modified: ' + daysSinceModified + ' < required ' + rule.Days_Since_Last_Modified__c;
+            }
+        }
+
+        // Check days since created
+        if (rule.Days_Since_Created__c != null) {
+            Integer daysSinceCreated = getDaysSince(c.CreatedDate);
+            if (daysSinceCreated < rule.Days_Since_Created__c) {
+                return 'Days since created: ' + daysSinceCreated + ' < required ' + rule.Days_Since_Created__c;
+            }
+        }
+
+        // Check days since last activity
+        if (rule.Days_Since_Last_Activity__c != null) {
+            try {
+                Object lastActivityObj = c.get('LastActivityDate');
+                if (lastActivityObj != null) {
+                    Date lastActivity = (Date)lastActivityObj;
+                    Integer daysSinceActivity = lastActivity.daysBetween(Date.today());
+                    if (daysSinceActivity < rule.Days_Since_Last_Activity__c) {
+                        return 'Days since activity: ' + daysSinceActivity + ' < required ' + rule.Days_Since_Last_Activity__c;
+                    }
+                }
+            } catch (SObjectException e) {
+                // Field not available, skip this check
+            }
+        }
+
+        // Check record type inclusion
+        if (String.isNotBlank(rule.Record_Type_Developer_Names__c)) {
+            Set<String> includedRecordTypes = parseList(rule.Record_Type_Developer_Names__c);
+            try {
+                SObject recordType = c.getSObject('RecordType');
+                String caseRecordType = recordType != null ? (String)recordType.get('DeveloperName') : null;
+                if (caseRecordType == null || !includedRecordTypes.contains(caseRecordType)) {
+                    return 'Record type "' + caseRecordType + '" not in included types';
+                }
+            } catch (SObjectException e) {
+                // RecordType not available
+            }
+        }
+
+        // Check record type exclusion
+        if (String.isNotBlank(rule.Exclude_Record_Type_Developer_Names__c)) {
+            Set<String> excludedRecordTypes = parseList(rule.Exclude_Record_Type_Developer_Names__c);
+            try {
+                SObject recordType = c.getSObject('RecordType');
+                String caseRecordType = recordType != null ? (String)recordType.get('DeveloperName') : null;
+                if (caseRecordType != null && excludedRecordTypes.contains(caseRecordType)) {
+                    return 'Record type "' + caseRecordType + '" is in excluded types';
+                }
+            } catch (SObjectException e) {
+                // RecordType not available
+            }
+        }
+
+        // Check child record criteria
+        if (!util_closer_ChildRecordService.caseMatchesChildCriteria(c.Id, rule, childRecords)) {
+            return 'Child record criteria not satisfied';
+        }
+
+        // Check Origin filter
+        if (String.isNotBlank(rule.Origins__c)) {
+            Set<String> allowedOrigins = parseList(rule.Origins__c);
+            try {
+                String caseOrigin = (String)c.get('Origin');
+                if (caseOrigin == null || !allowedOrigins.contains(caseOrigin)) {
+                    return 'Origin "' + caseOrigin + '" not in allowed origins';
+                }
+            } catch (SObjectException e) {
+                // Origin field not available
+            }
+        }
+
+        // Check Owner Name Like filter
+        if (String.isNotBlank(rule.Owner_Name_Like__c)) {
+            try {
+                String ownerName = getRelatedFieldValue(c, 'Owner', 'Name');
+                if (ownerName == null || !matchesLikePattern(ownerName, rule.Owner_Name_Like__c)) {
+                    return 'Owner name "' + ownerName + '" does not match pattern "' + rule.Owner_Name_Like__c + '"';
+                }
+            } catch (Exception e) {
+                // Owner not available
+            }
+        }
+
+        // Check Last Modified By Name Like filter
+        if (String.isNotBlank(rule.Last_Modified_By_Name_Like__c)) {
+            try {
+                String lastModifiedByName = getRelatedFieldValue(c, 'LastModifiedBy', 'Name');
+                if (lastModifiedByName == null || !matchesLikePattern(lastModifiedByName, rule.Last_Modified_By_Name_Like__c)) {
+                    return 'Last modified by "' + lastModifiedByName + '" does not match pattern "' + rule.Last_Modified_By_Name_Like__c + '"';
+                }
+            } catch (Exception e) {
+                // LastModifiedBy not available
+            }
+        }
+
+        // All checks passed - rule matches
+        return null;
     }
 
     /**

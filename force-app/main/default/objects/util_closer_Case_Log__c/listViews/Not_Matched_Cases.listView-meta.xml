@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Not_Matched_Cases</fullName>
+    <columns>NAME</columns>
+    <columns>Case__c</columns>
+    <columns>Case_Number__c</columns>
+    <columns>Original_Status__c</columns>
+    <columns>Rules_Evaluated_Count__c</columns>
+    <columns>Child_Records_Checked__c</columns>
+    <columns>Child_Records_Found__c</columns>
+    <columns>Batch_Chunk_Number__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Processing_Result__c</field>
+        <operation>equals</operation>
+        <value>Not Matched</value>
+    </filters>
+    <label>Not Matched Cases</label>
+    <language>en_US</language>
+</ListView>
