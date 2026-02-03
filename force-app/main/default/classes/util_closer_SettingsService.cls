@@ -118,6 +118,33 @@ public with sharing class util_closer_SettingsService {
     }
 
     /**
+     * @description Returns whether verbose logging is enabled.
+     * When enabled, creates detailed case-level logs for each batch execution.
+     * @return True if verbose logging is enabled.
+     */
+    public static Boolean isVerboseLoggingEnabled() {
+        return getSettings().Verbose_Logging_Enabled__c == true;
+    }
+
+    /**
+     * @description Returns the number of days to retain log records.
+     * @return Number of days, defaults to 90 if not configured.
+     */
+    public static Integer getLogRetentionDays() {
+        Decimal days = getSettings().Log_Retention_Days__c;
+        return (days != null && days > 0) ? days.intValue() : 90;
+    }
+
+    /**
+     * @description Returns whether detailed rule evaluation logging is enabled.
+     * When enabled, logs per-rule evaluation details for each case.
+     * @return True if rule evaluation logging is enabled.
+     */
+    public static Boolean isLogRuleEvaluationsEnabled() {
+        return getSettings().Log_Rule_Evaluations__c == true;
+    }
+
+    /**
      * @description Clears the cached settings. Useful for testing.
      */
     @TestVisible

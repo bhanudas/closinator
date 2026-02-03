@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Matched_Cases</fullName>
+    <columns>NAME</columns>
+    <columns>Case__c</columns>
+    <columns>Case_Number__c</columns>
+    <columns>Processing_Result__c</columns>
+    <columns>Original_Status__c</columns>
+    <columns>Target_Status__c</columns>
+    <columns>Matched_Rule_Label__c</columns>
+    <columns>Target_Reason__c</columns>
+    <columns>Rules_Evaluated_Count__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Processing_Result__c</field>
+        <operation>equals</operation>
+        <value>Matched,Updated,Simulated</value>
+    </filters>
+    <label>Matched Cases</label>
+    <language>en_US</language>
+</ListView>

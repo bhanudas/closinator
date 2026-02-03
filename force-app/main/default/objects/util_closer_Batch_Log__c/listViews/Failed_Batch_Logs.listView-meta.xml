@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Failed_Batch_Logs</fullName>
+    <columns>NAME</columns>
+    <columns>Start_Time__c</columns>
+    <columns>End_Time__c</columns>
+    <columns>Status__c</columns>
+    <columns>Execution_Mode__c</columns>
+    <columns>Total_Records_Processed__c</columns>
+    <columns>Total_Records_Failed__c</columns>
+    <columns>Running_User__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Status__c</field>
+        <operation>equals</operation>
+        <value>Failed,Completed with Errors</value>
+    </filters>
+    <label>Failed Batch Logs</label>
+    <language>en_US</language>
+</ListView>

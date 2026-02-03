@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Recent_Batch_Logs</fullName>
+    <columns>NAME</columns>
+    <columns>Start_Time__c</columns>
+    <columns>Duration_Seconds__c</columns>
+    <columns>Status__c</columns>
+    <columns>Execution_Mode__c</columns>
+    <columns>Total_Records_Processed__c</columns>
+    <columns>Total_Records_Updated__c</columns>
+    <columns>Total_Records_Failed__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Start_Time__c</field>
+        <operation>greaterThan</operation>
+        <value>LAST_N_DAYS:7</value>
+    </filters>
+    <label>Recent Batch Logs (Last 7 Days)</label>
+    <language>en_US</language>
+</ListView>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Auto_Close_Reason__c</fullName>
+    <description>Stores the reason why this Case was automatically closed by the Case Auto-Closer system.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>This field is automatically populated when a Case is closed by the Case Auto-Closer system, indicating the rule that triggered the closure.</inlineHelpText>
+    <label>Auto Close Reason</label>
+    <length>255</length>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

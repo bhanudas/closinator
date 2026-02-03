@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Log_Retention_Days__c</fullName>
+    <defaultValue>90</defaultValue>
+    <description>Number of days to retain batch and case logs before cleanup.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Logs older than this number of days will be deleted by the cleanup batch job. Default is 90 days.</inlineHelpText>
+    <label>Log Retention Days</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
