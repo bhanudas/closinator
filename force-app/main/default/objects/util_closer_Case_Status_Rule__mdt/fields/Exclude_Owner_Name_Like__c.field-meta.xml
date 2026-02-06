@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Exclude_Owner_Name_Like__c</fullName>
+    <description>Pattern to exclude Owner Names using LIKE operator. Supports % as wildcard. Cases owned by matching users will NOT match this rule. Example: %Integration% excludes integration users.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Enter a pattern to exclude Case Owners. Use % as wildcard. Example: %Bot% excludes any owner name containing Bot.</inlineHelpText>
+    <label>Exclude Owner Name Like</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

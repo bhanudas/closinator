@@ -80,7 +80,8 @@ public with sharing class util_closer_RuleEngine {
                    Child_Object_API_Name__c, Child_Lookup_Field__c,
                    Child_Filter_Field__c, Child_Filter_Value__c,
                    Child_Filter_Operator__c, Require_Child_Record__c,
-                   Origins__c, Owner_Name_Like__c, Last_Modified_By_Name_Like__c
+                   Origins__c, Owner_Name_Like__c, Last_Modified_By_Name_Like__c,
+                   Exclude_Origins__c, Exclude_Owner_Name_Like__c
             FROM util_closer_Case_Status_Rule__mdt
             WHERE Is_Active__c = true
             ORDER BY Execution_Order__c ASC
@@ -370,6 +371,39 @@ public with sharing class util_closer_RuleEngine {
             }
         }
 
+        // Check Origin exclusion
+        if (String.isNotBlank(rule.Exclude_Origins__c)) {
+            Set<String> excludedOrigins = parseList(rule.Exclude_Origins__c);
+            try {
+                String caseOrigin = (String)c.get('Origin');
+                if (caseOrigin != null && excludedOrigins.contains(caseOrigin)) {
+                    return 'Origin "' + caseOrigin + '" is in excluded origins';
+                }
+            } catch (SObjectException e) {
+                // Origin field not available
+            }
+        }
+
+        // Check Exclude Owner Name Like filter
+        if (String.isNotBlank(rule.Exclude_Owner_Name_Like__c)) {
+            try {
+                String ownerName = getRelatedFieldValue(c, 'Owner', 'Name');
+                if (ownerName != null && matchesLikePattern(ownerName, rule.Exclude_Owner_Name_Like__c)) {
+                    return 'Owner name "' + ownerName + '" matches excluded pattern "' + rule.Exclude_Owner_Name_Like__c + '"';
+                }
+            } catch (Exception e) {
+                // Owner not available
+            }
+        }
+
+        // Check Additional Filter Logic
+        if (String.isNotBlank(rule.Additional_Filter_Logic__c)) {
+            String filterResult = evaluateAdditionalFilter(c, rule.Additional_Filter_Logic__c);
+            if (filterResult != null) {
+                return filterResult;
+            }
+        }
+
         // All checks passed - rule matches
         return null;
     }
@@ -528,6 +562,39 @@ public with sharing class util_closer_RuleEngine {
             }
         }
 
+        // Check Origin exclusion
+        if (String.isNotBlank(rule.Exclude_Origins__c)) {
+            Set<String> excludedOrigins = parseList(rule.Exclude_Origins__c);
+            try {
+                String caseOrigin = (String)c.get('Origin');
+                if (caseOrigin != null && excludedOrigins.contains(caseOrigin)) {
+                    return false;
+                }
+            } catch (SObjectException e) {
+                // Origin field not available
+            }
+        }
+
+        // Check Exclude Owner Name Like filter
+        if (String.isNotBlank(rule.Exclude_Owner_Name_Like__c)) {
+            try {
+                String ownerName = getRelatedFieldValue(c, 'Owner', 'Name');
+                if (ownerName != null && matchesLikePattern(ownerName, rule.Exclude_Owner_Name_Like__c)) {
+                    return false;
+                }
+            } catch (Exception e) {
+                // Owner not available
+            }
+        }
+
+        // Check Additional Filter Logic
+        if (String.isNotBlank(rule.Additional_Filter_Logic__c)) {
+            String filterResult = evaluateAdditionalFilter(c, rule.Additional_Filter_Logic__c);
+            if (filterResult != null) {
+                return false;
+            }
+        }
+
         return true;
     }
     
@@ -629,6 +696,235 @@ public with sharing class util_closer_RuleEngine {
         Pattern regexPattern = Pattern.compile('(?i)^' + regex + '$');
         Matcher m = regexPattern.matcher(value);
         return m.matches();
+    }
+
+    /**
+     * @description Evaluates Additional Filter Logic expression against a Case.
+     * Supports simple expressions like:
+     * - Field = 'Value'
+     * - Field != 'Value'
+     * - Field = null
+     * - Field != null
+     * - Field LIKE 'Pattern%'
+     * - Field IN ('Value1', 'Value2')
+     * - Field NOT IN ('Value1', 'Value2')
+     * Multiple conditions can be combined with AND.
+     * @param c The case to evaluate.
+     * @param filterLogic The filter expression to evaluate.
+     * @return Null if the case matches the filter, otherwise a failure reason string.
+     */
+    @TestVisible
+    private static String evaluateAdditionalFilter(Case c, String filterLogic) {
+        if (String.isBlank(filterLogic)) {
+            return null;
+        }
+
+        try {
+            // Split by AND (case-insensitive)
+            String normalizedFilter = filterLogic.trim();
+            List<String> conditions = splitByAnd(normalizedFilter);
+
+            for (String condition : conditions) {
+                String result = evaluateSingleCondition(c, condition.trim());
+                if (result != null) {
+                    return result;
+                }
+            }
+            return null; // All conditions passed
+        } catch (Exception e) {
+            util_closer_Logger.debug('RuleEngine', 'Error evaluating additional filter: ' + e.getMessage());
+            return 'Filter evaluation error: ' + e.getMessage();
+        }
+    }
+
+    /**
+     * @description Splits a filter string by AND keyword (case-insensitive).
+     * @param filter The filter string to split.
+     * @return List of individual conditions.
+     */
+    @TestVisible
+    private static List<String> splitByAnd(String filter) {
+        List<String> conditions = new List<String>();
+        // Use regex to split by AND (case-insensitive, with word boundaries)
+        // Use (?i) inline flag for case-insensitive matching in Apex
+        Pattern andPattern = Pattern.compile('(?i)\\s+AND\\s+');
+        String[] parts = andPattern.split(filter, 0);
+        for (String part : parts) {
+            if (String.isNotBlank(part)) {
+                conditions.add(part.trim());
+            }
+        }
+        return conditions;
+    }
+
+    /**
+     * @description Evaluates a single condition against a Case.
+     * @param c The case to evaluate.
+     * @param condition A single condition like "Field = 'Value'" or "Field != null".
+     * @return Null if condition is satisfied, otherwise a failure reason.
+     */
+    @TestVisible
+    private static String evaluateSingleCondition(Case c, String condition) {
+        // Try to parse different condition types
+        
+        // Pattern for: Field NOT IN ('val1', 'val2')
+        Pattern notInPattern = Pattern.compile('(?i)^(\\w+)\\s+NOT\\s+IN\\s*\\((.+)\\)$');
+        Matcher notInMatcher = notInPattern.matcher(condition);
+        if (notInMatcher.matches()) {
+            String fieldName = notInMatcher.group(1);
+            Set<String> values = parseInValues(notInMatcher.group(2));
+            Object fieldValue = getFieldValue(c, fieldName);
+            String strValue = fieldValue != null ? String.valueOf(fieldValue) : null;
+            if (strValue != null && values.contains(strValue)) {
+                return 'Field ' + fieldName + ' value "' + strValue + '" is in excluded values';
+            }
+            return null;
+        }
+
+        // Pattern for: Field IN ('val1', 'val2')
+        Pattern inPattern = Pattern.compile('(?i)^(\\w+)\\s+IN\\s*\\((.+)\\)$');
+        Matcher inMatcher = inPattern.matcher(condition);
+        if (inMatcher.matches()) {
+            String fieldName = inMatcher.group(1);
+            Set<String> values = parseInValues(inMatcher.group(2));
+            Object fieldValue = getFieldValue(c, fieldName);
+            String strValue = fieldValue != null ? String.valueOf(fieldValue) : null;
+            if (strValue == null || !values.contains(strValue)) {
+                return 'Field ' + fieldName + ' value "' + strValue + '" not in allowed values';
+            }
+            return null;
+        }
+
+        // Pattern for: Field LIKE 'Pattern'
+        Pattern likePattern = Pattern.compile('(?i)^(\\w+)\\s+LIKE\\s+\'(.*)\'$');
+        Matcher likeMatcher = likePattern.matcher(condition);
+        if (likeMatcher.matches()) {
+            String fieldName = likeMatcher.group(1);
+            String pattern = likeMatcher.group(2);
+            Object fieldValue = getFieldValue(c, fieldName);
+            String strValue = fieldValue != null ? String.valueOf(fieldValue) : null;
+            if (strValue == null || !matchesLikePattern(strValue, pattern)) {
+                return 'Field ' + fieldName + ' value "' + strValue + '" does not match pattern "' + pattern + '"';
+            }
+            return null;
+        }
+
+        // Pattern for: Field != null
+        Pattern notNullPattern = Pattern.compile('(?i)^(\\w+)\\s*!=\\s*null$');
+        Matcher notNullMatcher = notNullPattern.matcher(condition);
+        if (notNullMatcher.matches()) {
+            String fieldName = notNullMatcher.group(1);
+            Object fieldValue = getFieldValue(c, fieldName);
+            if (fieldValue == null) {
+                return 'Field ' + fieldName + ' is null (expected not null)';
+            }
+            return null;
+        }
+
+        // Pattern for: Field = null
+        Pattern nullPattern = Pattern.compile('(?i)^(\\w+)\\s*=\\s*null$');
+        Matcher nullMatcher = nullPattern.matcher(condition);
+        if (nullMatcher.matches()) {
+            String fieldName = nullMatcher.group(1);
+            Object fieldValue = getFieldValue(c, fieldName);
+            if (fieldValue != null) {
+                return 'Field ' + fieldName + ' is not null (expected null)';
+            }
+            return null;
+        }
+
+        // Pattern for: Field != 'Value'
+        Pattern notEqualsPattern = Pattern.compile('(?i)^(\\w+)\\s*!=\\s*\'(.*)\'$');
+        Matcher notEqualsMatcher = notEqualsPattern.matcher(condition);
+        if (notEqualsMatcher.matches()) {
+            String fieldName = notEqualsMatcher.group(1);
+            String expectedValue = notEqualsMatcher.group(2);
+            Object fieldValue = getFieldValue(c, fieldName);
+            String strValue = fieldValue != null ? String.valueOf(fieldValue) : null;
+            if (strValue != null && strValue.equals(expectedValue)) {
+                return 'Field ' + fieldName + ' equals excluded value "' + expectedValue + '"';
+            }
+            return null;
+        }
+
+        // Pattern for: Field = 'Value'
+        Pattern equalsPattern = Pattern.compile('(?i)^(\\w+)\\s*=\\s*\'(.*)\'$');
+        Matcher equalsMatcher = equalsPattern.matcher(condition);
+        if (equalsMatcher.matches()) {
+            String fieldName = equalsMatcher.group(1);
+            String expectedValue = equalsMatcher.group(2);
+            Object fieldValue = getFieldValue(c, fieldName);
+            String strValue = fieldValue != null ? String.valueOf(fieldValue) : null;
+            if (strValue == null || !strValue.equals(expectedValue)) {
+                return 'Field ' + fieldName + ' value "' + strValue + '" != expected "' + expectedValue + '"';
+            }
+            return null;
+        }
+
+        // Pattern for: Field = true/false (boolean)
+        Pattern boolPattern = Pattern.compile('(?i)^(\\w+)\\s*=\\s*(true|false)$');
+        Matcher boolMatcher = boolPattern.matcher(condition);
+        if (boolMatcher.matches()) {
+            String fieldName = boolMatcher.group(1);
+            Boolean expectedValue = Boolean.valueOf(boolMatcher.group(2));
+            Object fieldValue = getFieldValue(c, fieldName);
+            if (fieldValue == null || !expectedValue.equals((Boolean)fieldValue)) {
+                return 'Field ' + fieldName + ' is not ' + expectedValue;
+            }
+            return null;
+        }
+
+        // Unrecognized pattern - log warning and skip (allow case to pass)
+        util_closer_Logger.debug('RuleEngine', 'Unrecognized filter condition format: ' + condition);
+        return null;
+    }
+
+    /**
+     * @description Parses the values from an IN clause.
+     * @param valuesString String like "'val1', 'val2', 'val3'"
+     * @return Set of parsed values (without quotes).
+     */
+    @TestVisible
+    private static Set<String> parseInValues(String valuesString) {
+        Set<String> values = new Set<String>();
+        // Split by comma, respecting quotes
+        Pattern valuePattern = Pattern.compile('\'([^\']*)\'');
+        Matcher valueMatcher = valuePattern.matcher(valuesString);
+        while (valueMatcher.find()) {
+            values.add(valueMatcher.group(1));
+        }
+        return values;
+    }
+
+    /**
+     * @description Safely gets a field value from a Case.
+     * @param c The case record.
+     * @param fieldName The field API name.
+     * @return The field value or null if not available.
+     */
+    @TestVisible
+    private static Object getFieldValue(Case c, String fieldName) {
+        if (c == null || String.isBlank(fieldName)) {
+            return null;
+        }
+        try {
+            // Handle relationship fields like Owner.Name
+            if (fieldName.contains('.')) {
+                List<String> parts = fieldName.split('\\.');
+                SObject current = c;
+                for (Integer i = 0; i < parts.size() - 1; i++) {
+                    current = current.getSObject(parts[i]);
+                    if (current == null) {
+                        return null;
+                    }
+                }
+                return current.get(parts[parts.size() - 1]);
+            }
+            return c.get(fieldName);
+        } catch (Exception e) {
+            util_closer_Logger.debug('RuleEngine', 'Could not get field value for ' + fieldName + ': ' + e.getMessage());
+            return null;
+        }
     }
 }
 
