@@ -118,23 +118,70 @@
 
                 <template if:false={isEditMode}>
                     <!-- Read-only view -->
+
+                    <!-- General -->
+                    <div class="section-header">General</div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-3 slds-p-around_x-small">
+                            <span class="setting-label">Active:</span>
+                            <span class="setting-value">{activeLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3 slds-p-around_x-small">
+                            <span class="setting-label">Simulation Mode:</span>
+                            <span class="setting-value">{simulationModeLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3 slds-p-around_x-small">
+                            <span class="setting-label">Debug Mode:</span>
+                            <span class="setting-value">{debugModeLabel}</span>
+                        </div>
+                    </div>
+
+                    <!-- Batch Configuration -->
+                    <div class="section-header">Batch Configuration</div>
                     <div class="slds-grid slds-wrap">
                         <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
                             <span class="setting-label">Batch Size:</span>
                             <span class="setting-value">{batchSize}</span>
                         </div>
                         <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
-                            <span class="setting-label">Debug Mode:</span>
-                            <span class="setting-value">{debugModeLabel}</span>
-                        </div>
-                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
-                            <span class="setting-label">Active:</span>
-                            <span class="setting-value">{activeLabel}</span>
-                        </div>
-                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
-                            <span class="setting-label">Cron:</span>
+                            <span class="setting-label">Cron Expression:</span>
                             <span class="setting-value">{cronExpression}</span>
                         </div>
+                    </div>
+
+                    <!-- Logging -->
+                    <div class="section-header">Logging</div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-3 slds-p-around_x-small">
+                            <span class="setting-label">Verbose Logging:</span>
+                            <span class="setting-value">{verboseLoggingLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3 slds-p-around_x-small">
+                            <span class="setting-label">Log Rule Evaluations:</span>
+                            <span class="setting-value">{logRuleEvaluationsLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-3 slds-p-around_x-small">
+                            <span class="setting-label">Log Retention Days:</span>
+                            <span class="setting-value">{logRetentionDays}</span>
+                        </div>
+                    </div>
+
+                    <!-- Auto Close Reason -->
+                    <div class="section-header">Auto Close Reason</div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
+                            <span class="setting-label">Enabled:</span>
+                            <span class="setting-value">{autoCloseReasonEnabledLabel}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 slds-p-around_x-small">
+                            <span class="setting-label">Reason Field:</span>
+                            <span class="setting-value">{autoCloseReasonField}</span>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="section-header">Notifications</div>
+                    <div class="slds-grid slds-wrap">
                         <div class="slds-col slds-size_1-of-1 slds-p-around_x-small">
                             <span class="setting-label">Error Emails:</span>
                             <span class="setting-value">{errorEmails}</span>
@@ -148,8 +195,43 @@
 
                 <template if:true={isEditMode}>
                     <!-- Edit view -->
+
+                    <!-- General -->
+                    <div class="section-header">General</div>
                     <div class="slds-grid slds-wrap slds-gutters">
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                            <lightning-input
+                                type="checkbox"
+                                label="Active"
+                                checked={isActive}
+                                data-field="isActive"
+                                onchange={handleSettingChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                            <lightning-input
+                                type="checkbox"
+                                label="Simulation Mode"
+                                checked={simulationMode}
+                                data-field="simulationMode"
+                                onchange={handleSettingChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                            <lightning-input
+                                type="checkbox"
+                                label="Debug Mode"
+                                checked={debugMode}
+                                data-field="debugMode"
+                                onchange={handleSettingChange}>
+                            </lightning-input>
+                        </div>
+                    </div>
+
+                    <!-- Batch Configuration -->
+                    <div class="section-header">Batch Configuration</div>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
                             <lightning-input
                                 type="number"
                                 label="Batch Size"
@@ -160,25 +242,70 @@
                                 max="2000">
                             </lightning-input>
                         </div>
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                    </div>
+
+                    <!-- Logging -->
+                    <div class="section-header">Logging</div>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
                             <lightning-input
                                 type="checkbox"
-                                label="Debug Mode"
-                                checked={debugMode}
-                                data-field="debugMode"
+                                label="Verbose Logging"
+                                checked={verboseLoggingEnabled}
+                                data-field="verboseLoggingEnabled"
                                 onchange={handleSettingChange}>
                             </lightning-input>
                         </div>
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
                             <lightning-input
                                 type="checkbox"
-                                label="Active"
-                                checked={isActive}
-                                data-field="isActive"
+                                label="Log Rule Evaluations"
+                                checked={logRuleEvaluations}
+                                data-field="logRuleEvaluations"
                                 onchange={handleSettingChange}>
                             </lightning-input>
                         </div>
-                        <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                            <lightning-input
+                                type="number"
+                                label="Log Retention Days"
+                                value={logRetentionDays}
+                                data-field="logRetentionDays"
+                                onchange={handleSettingChange}
+                                min="1"
+                                max="365">
+                            </lightning-input>
+                        </div>
+                    </div>
+
+                    <!-- Auto Close Reason -->
+                    <div class="section-header">Auto Close Reason</div>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
+                            <lightning-input
+                                type="checkbox"
+                                label="Auto Close Reason Enabled"
+                                checked={autoCloseReasonEnabled}
+                                data-field="autoCloseReasonEnabled"
+                                onchange={handleSettingChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
+                            <lightning-input
+                                type="text"
+                                label="Auto Close Reason Field API Name"
+                                value={autoCloseReasonField}
+                                data-field="autoCloseReasonField"
+                                onchange={handleSettingChange}
+                                placeholder="e.g. Auto_Close_Reason__c">
+                            </lightning-input>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="section-header">Notifications</div>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
                             <lightning-textarea
                                 label="Error Notification Emails (semicolon-separated)"
                                 value={errorEmails}
@@ -186,7 +313,7 @@
                                 onchange={handleSettingChange}>
                             </lightning-textarea>
                         </div>
-                        <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_small">
                             <lightning-textarea
                                 label="Completion Notification Emails (semicolon-separated)"
                                 value={completionEmails}

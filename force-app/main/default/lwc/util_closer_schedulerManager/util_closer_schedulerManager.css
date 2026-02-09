@@ -35,6 +35,22 @@
     color: var(--slds-g-color-neutral-base-10, #080707);
 }
 
+.section-header {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--slds-g-color-neutral-base-30, #706e6b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 0.25rem 0.25rem;
+    margin-top: 0.75rem;
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    margin-bottom: 0.25rem;
+}
+
+.section-header:first-child {
+    margin-top: 0;
+}
+
 .setting-label {
     font-weight: 600;
     color: var(--slds-g-color-neutral-base-30, #706e6b);

@@ -30,10 +30,20 @@ export default class Util_closer_schedulerManager extends LightningElement {
     @track cronExpression = '0 0 2 * * ?';
     @track isBatchRunning = false;
     
-    // Settings
-    @track batchSize = 200;
-    @track debugMode = false;
+    // Settings - General
     @track isActive = true;
+    @track simulationMode = false;
+    @track debugMode = false;
+    // Settings - Batch
+    @track batchSize = 200;
+    // Settings - Logging
+    @track verboseLoggingEnabled = false;
+    @track logRuleEvaluations = false;
+    @track logRetentionDays = 30;
+    // Settings - Auto Close Reason
+    @track autoCloseReasonEnabled = false;
+    @track autoCloseReasonField = '';
+    // Settings - Notifications
     @track errorEmails = '';
     @track completionEmails = '';
     
@@ -68,14 +78,25 @@ export default class Util_closer_schedulerManager extends LightningElement {
     wiredSettings(result) {
         this.wiredSettingsResult = result;
         if (result.data) {
-            this.batchSize = result.data.batchSize || 200;
-            this.debugMode = result.data.debugMode || false;
+            // General
             this.isActive = result.data.isActive !== false;
-            this.errorEmails = result.data.errorEmails || '';
-            this.completionEmails = result.data.completionEmails || '';
+            this.simulationMode = result.data.simulationMode || false;
+            this.debugMode = result.data.debugMode || false;
+            // Batch
+            this.batchSize = result.data.batchSize || 200;
             if (result.data.cronExpression) {
                 this.cronExpression = result.data.cronExpression;
             }
+            // Logging
+            this.verboseLoggingEnabled = result.data.verboseLoggingEnabled || false;
+            this.logRuleEvaluations = result.data.logRuleEvaluations || false;
+            this.logRetentionDays = result.data.logRetentionDays || 30;
+            // Auto Close Reason
+            this.autoCloseReasonEnabled = result.data.autoCloseReasonEnabled || false;
+            this.autoCloseReasonField = result.data.autoCloseReasonField || '';
+            // Notifications
+            this.errorEmails = result.data.errorEmails || '';
+            this.completionEmails = result.data.completionEmails || '';
         } else if (result.error) {
             this.handleError(result.error);
         }
@@ -98,8 +119,24 @@ export default class Util_closer_schedulerManager extends LightningElement {
         return this.isActive ? 'Yes' : 'No';
     }
     
+    get simulationModeLabel() {
+        return this.simulationMode ? 'On' : 'Off';
+    }
+    
     get debugModeLabel() {
         return this.debugMode ? 'On' : 'Off';
+    }
+    
+    get verboseLoggingLabel() {
+        return this.verboseLoggingEnabled ? 'On' : 'Off';
+    }
+    
+    get logRuleEvaluationsLabel() {
+        return this.logRuleEvaluations ? 'On' : 'Off';
+    }
+    
+    get autoCloseReasonEnabledLabel() {
+        return this.autoCloseReasonEnabled ? 'On' : 'Off';
     }
     
     get isCustomCron() {
@@ -227,10 +264,21 @@ export default class Util_closer_schedulerManager extends LightningElement {
         this.isLoading = true;
         
         const settingsMap = {
-            batchSize: parseInt(this.batchSize, 10),
-            debugMode: this.debugMode,
+            // General
             isActive: this.isActive,
+            simulationMode: this.simulationMode,
+            debugMode: this.debugMode,
+            // Batch
+            batchSize: parseInt(this.batchSize, 10),
             cronExpression: this.cronExpression,
+            // Logging
+            verboseLoggingEnabled: this.verboseLoggingEnabled,
+            logRuleEvaluations: this.logRuleEvaluations,
+            logRetentionDays: parseInt(this.logRetentionDays, 10),
+            // Auto Close Reason
+            autoCloseReasonEnabled: this.autoCloseReasonEnabled,
+            autoCloseReasonField: this.autoCloseReasonField,
+            // Notifications
             errorEmails: this.errorEmails,
             completionEmails: this.completionEmails
         };

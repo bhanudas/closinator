@@ -140,11 +140,22 @@ public with sharing class util_closer_SchedulerController {
             }
             util_closer_Settings__c settings = util_closer_SettingsService.getSettings();
             
-            result.put('batchSize', settings.Batch_Size__c);
-            result.put('debugMode', settings.Debug_Mode__c);
+            // General
             result.put('isActive', settings.Is_Active__c);
+            result.put('simulationMode', settings.Simulation_Mode__c);
+            result.put('debugMode', settings.Debug_Mode__c);
+            // Batch
+            result.put('batchSize', settings.Batch_Size__c);
             result.put('cronExpression', settings.Cron_Expression__c);
             result.put('scheduledJobName', settings.Scheduled_Job_Name__c);
+            // Logging
+            result.put('verboseLoggingEnabled', settings.Verbose_Logging_Enabled__c);
+            result.put('logRuleEvaluations', settings.Log_Rule_Evaluations__c);
+            result.put('logRetentionDays', settings.Log_Retention_Days__c);
+            // Auto Close Reason
+            result.put('autoCloseReasonEnabled', settings.Auto_Close_Reason_Enabled__c);
+            result.put('autoCloseReasonField', settings.Auto_Close_Reason_Field__c);
+            // Notifications
             result.put('errorEmails', settings.Error_Notification_Emails__c);
             result.put('completionEmails', settings.Completion_Notification_Emails__c);
             
@@ -172,15 +183,19 @@ public with sharing class util_closer_SchedulerController {
                 settings = new util_closer_Settings__c();
             }
             
-            // Update fields from map
-            if (settingsMap.containsKey('batchSize')) {
-                settings.Batch_Size__c = (Decimal) settingsMap.get('batchSize');
+            // Update fields from map - General
+            if (settingsMap.containsKey('isActive')) {
+                settings.Is_Active__c = (Boolean) settingsMap.get('isActive');
+            }
+            if (settingsMap.containsKey('simulationMode')) {
+                settings.Simulation_Mode__c = (Boolean) settingsMap.get('simulationMode');
             }
             if (settingsMap.containsKey('debugMode')) {
                 settings.Debug_Mode__c = (Boolean) settingsMap.get('debugMode');
             }
-            if (settingsMap.containsKey('isActive')) {
-                settings.Is_Active__c = (Boolean) settingsMap.get('isActive');
+            // Batch
+            if (settingsMap.containsKey('batchSize')) {
+                settings.Batch_Size__c = (Decimal) settingsMap.get('batchSize');
             }
             if (settingsMap.containsKey('cronExpression')) {
                 settings.Cron_Expression__c = (String) settingsMap.get('cronExpression');
@@ -188,6 +203,24 @@ public with sharing class util_closer_SchedulerController {
             if (settingsMap.containsKey('scheduledJobName')) {
                 settings.Scheduled_Job_Name__c = (String) settingsMap.get('scheduledJobName');
             }
+            // Logging
+            if (settingsMap.containsKey('verboseLoggingEnabled')) {
+                settings.Verbose_Logging_Enabled__c = (Boolean) settingsMap.get('verboseLoggingEnabled');
+            }
+            if (settingsMap.containsKey('logRuleEvaluations')) {
+                settings.Log_Rule_Evaluations__c = (Boolean) settingsMap.get('logRuleEvaluations');
+            }
+            if (settingsMap.containsKey('logRetentionDays')) {
+                settings.Log_Retention_Days__c = (Decimal) settingsMap.get('logRetentionDays');
+            }
+            // Auto Close Reason
+            if (settingsMap.containsKey('autoCloseReasonEnabled')) {
+                settings.Auto_Close_Reason_Enabled__c = (Boolean) settingsMap.get('autoCloseReasonEnabled');
+            }
+            if (settingsMap.containsKey('autoCloseReasonField')) {
+                settings.Auto_Close_Reason_Field__c = (String) settingsMap.get('autoCloseReasonField');
+            }
+            // Notifications
             if (settingsMap.containsKey('errorEmails')) {
                 settings.Error_Notification_Emails__c = (String) settingsMap.get('errorEmails');
             }
