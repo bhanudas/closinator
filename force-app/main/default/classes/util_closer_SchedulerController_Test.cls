@@ -387,11 +387,22 @@ private class util_closer_SchedulerController_Test {
     static void testUpdateSettings_AllFields() {
         // Setup - update ALL fields to ensure complete coverage
         Map<String, Object> allSettings = new Map<String, Object>{
-            'batchSize' => 250,
-            'debugMode' => true,
+            // General
             'isActive' => true,
+            'simulationMode' => true,
+            'debugMode' => true,
+            // Batch
+            'batchSize' => 250,
             'cronExpression' => '0 0 5 * * ?',
             'scheduledJobName' => 'Test Scheduler',
+            // Logging
+            'verboseLoggingEnabled' => true,
+            'logRuleEvaluations' => true,
+            'logRetentionDays' => 60,
+            // Auto Close Reason
+            'autoCloseReasonEnabled' => true,
+            'autoCloseReasonField' => 'Auto_Close_Reason__c',
+            // Notifications
             'errorEmails' => 'errors@example.com',
             'completionEmails' => 'complete@example.com'
         };
@@ -403,11 +414,22 @@ private class util_closer_SchedulerController_Test {
 
         // Verify all fields
         util_closer_Settings__c updated = util_closer_Settings__c.getOrgDefaults();
-        System.assertEquals(250, updated.Batch_Size__c, 'Batch size should be updated');
-        System.assertEquals(true, updated.Debug_Mode__c, 'Debug mode should be updated');
+        // General
         System.assertEquals(true, updated.Is_Active__c, 'Is Active should be updated');
+        System.assertEquals(true, updated.Simulation_Mode__c, 'Simulation Mode should be updated');
+        System.assertEquals(true, updated.Debug_Mode__c, 'Debug mode should be updated');
+        // Batch
+        System.assertEquals(250, updated.Batch_Size__c, 'Batch size should be updated');
         System.assertEquals('0 0 5 * * ?', updated.Cron_Expression__c, 'Cron should be updated');
         System.assertEquals('Test Scheduler', updated.Scheduled_Job_Name__c, 'Job name should be updated');
+        // Logging
+        System.assertEquals(true, updated.Verbose_Logging_Enabled__c, 'Verbose logging should be updated');
+        System.assertEquals(true, updated.Log_Rule_Evaluations__c, 'Log rule evaluations should be updated');
+        System.assertEquals(60, updated.Log_Retention_Days__c, 'Log retention days should be updated');
+        // Auto Close Reason
+        System.assertEquals(true, updated.Auto_Close_Reason_Enabled__c, 'Auto close reason enabled should be updated');
+        System.assertEquals('Auto_Close_Reason__c', updated.Auto_Close_Reason_Field__c, 'Auto close reason field should be updated');
+        // Notifications
         System.assertEquals('errors@example.com', updated.Error_Notification_Emails__c, 'Error emails should be updated');
         System.assertEquals('complete@example.com', updated.Completion_Notification_Emails__c, 'Completion emails should be updated');
     }
@@ -497,12 +519,22 @@ private class util_closer_SchedulerController_Test {
         Map<String, Object> result = util_closer_SchedulerController.getSettings();
         Test.stopTest();
 
-        // Verify all fields are returned
-        System.assert(result.containsKey('batchSize'), 'Should have batchSize');
-        System.assert(result.containsKey('debugMode'), 'Should have debugMode');
+        // Verify all fields are returned - General
         System.assert(result.containsKey('isActive'), 'Should have isActive');
+        System.assert(result.containsKey('simulationMode'), 'Should have simulationMode');
+        System.assert(result.containsKey('debugMode'), 'Should have debugMode');
+        // Batch
+        System.assert(result.containsKey('batchSize'), 'Should have batchSize');
         System.assert(result.containsKey('cronExpression'), 'Should have cronExpression');
         System.assert(result.containsKey('scheduledJobName'), 'Should have scheduledJobName');
+        // Logging
+        System.assert(result.containsKey('verboseLoggingEnabled'), 'Should have verboseLoggingEnabled');
+        System.assert(result.containsKey('logRuleEvaluations'), 'Should have logRuleEvaluations');
+        System.assert(result.containsKey('logRetentionDays'), 'Should have logRetentionDays');
+        // Auto Close Reason
+        System.assert(result.containsKey('autoCloseReasonEnabled'), 'Should have autoCloseReasonEnabled');
+        System.assert(result.containsKey('autoCloseReasonField'), 'Should have autoCloseReasonField');
+        // Notifications
         System.assert(result.containsKey('errorEmails'), 'Should have errorEmails');
         System.assert(result.containsKey('completionEmails'), 'Should have completionEmails');
     }
