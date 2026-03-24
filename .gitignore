@@ -48,5 +48,6 @@ $RECYCLE.BIN/
 **/venv/
 docs/analysis/
 
-# Custom Metadata (managed per-org, not in source control)
+# Custom Metadata (managed per-org, not in source control by default)
 force-app/main/default/customMetadata/
+!force-app/main/default/customMetadata/util_closer_Case_Status_Rule__mdt.Abandoned_Calls.md-meta.xml
