@@ -10,6 +10,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>c:util_closer_RuleViewer</componentName>
+                <identifier>ruleViewer</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>c:util_closer_LogViewer</componentName>
                 <identifier>logViewer</identifier>
             </componentInstance>
