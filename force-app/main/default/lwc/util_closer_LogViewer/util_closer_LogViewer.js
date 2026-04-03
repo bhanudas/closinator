@@ -4,7 +4,7 @@ import { NavigationMixin } from 'lightning/navigation';
 import getBatchLogs from '@salesforce/apex/util_closer_LogViewerController.getBatchLogs';
 import getCaseLogs from '@salesforce/apex/util_closer_LogViewerController.getCaseLogs';
 import getCaseLogFilterOptions from '@salesforce/apex/util_closer_LogViewerController.getCaseLogFilterOptions';
-import exportCaseLogsAsCsv from '@salesforce/apex/util_closer_LogViewerController.exportCaseLogsAsCsv';
+import getCaseLogExportQuery from '@salesforce/apex/util_closer_LogViewerController.getCaseLogExportQuery';
 
 const BATCH_PAGE_SIZE = 25;
 const CASE_PAGE_SIZE = 100;
@@ -627,8 +627,8 @@ export default class Util_closer_LogViewer extends NavigationMixin(LightningElem
         }
     }
 
-    // Export handler
-    async handleExportCsv() {
+    // Copy SOQL query to clipboard
+    async handleCopySoql() {
         try {
             const filter = {
                 processingResult: this.caseResultFilter || null,
@@ -636,23 +636,16 @@ export default class Util_closer_LogViewer extends NavigationMixin(LightningElem
                 searchTerm: this.caseSearchTerm || null
             };
 
-            const csvData = await exportCaseLogsAsCsv({
+            const soql = await getCaseLogExportQuery({
                 batchLogId: this.selectedBatchLogId,
                 filterJson: JSON.stringify(filter)
             });
 
-            // Download CSV
-            const blob = new Blob([csvData], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `case_logs_${this.selectedBatchName}_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
+            await navigator.clipboard.writeText(soql);
 
-            this.showToast('Success', 'CSV exported successfully', 'success');
+            this.showToast('SOQL Copied to Clipboard', soql, 'success', 'sticky');
         } catch (error) {
-            this.showError('Error exporting CSV', error);
+            this.showError('Error copying SOQL', error);
         }
     }
 
@@ -680,8 +673,8 @@ export default class Util_closer_LogViewer extends NavigationMixin(LightningElem
     }
 
     // Utility methods
-    showToast(title, message, variant) {
-        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    showToast(title, message, variant, mode) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant, mode: mode || 'dismissible' }));
     }
 
     showError(title, error) {

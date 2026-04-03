@@ -208,13 +208,14 @@ public with sharing class util_closer_LogViewerController {
     }
     
     /**
-     * @description Export case logs for a batch as CSV data
+     * @description Build the SOQL query for case logs matching the given filters.
+     * Returns the query string for the user to run externally (Dev Console, Workbench, etc.).
      * @param batchLogId The batch log ID
      * @param filterJson Filter criteria
-     * @return CSV string of case log data
+     * @return SOQL query string
      */
     @AuraEnabled
-    public static String exportCaseLogsAsCsv(Id batchLogId, String filterJson) {
+    public static String getCaseLogExportQuery(Id batchLogId, String filterJson) {
         CaseLogFilter filter = parseCaseLogFilter(filterJson);
         if (filter == null) {
             filter = new CaseLogFilter();
@@ -222,36 +223,10 @@ public with sharing class util_closer_LogViewerController {
         filter.batchLogId = batchLogId;
         
         String whereClause = buildCaseWhereClause(filter);
-        String query = 'SELECT Name, Case_Number__c, Original_Status__c, Target_Status__c, ' +
-                      'Processing_Result__c, Matched_Rule_Label__c, Error_Message__c, CreatedDate ' +
-                      'FROM util_closer_Case_Log__c WHERE ' + whereClause +
-                      ' ORDER BY CreatedDate DESC LIMIT 50000';
-        
-        List<util_closer_Case_Log__c> logs = Database.query(query);
-        
-        // Build CSV
-        List<String> headers = new List<String>{
-            'Log Name', 'Case Number', 'Original Status', 'Target Status',
-            'Result', 'Matched Rule', 'Error Message', 'Created Date'
-        };
-        
-        List<String> rows = new List<String>{ String.join(headers, ',') };
-        
-        for (util_closer_Case_Log__c log : logs) {
-            List<String> values = new List<String>{
-                escapeCsvValue(log.Name),
-                escapeCsvValue(log.Case_Number__c),
-                escapeCsvValue(log.Original_Status__c),
-                escapeCsvValue(log.Target_Status__c),
-                escapeCsvValue(log.Processing_Result__c),
-                escapeCsvValue(log.Matched_Rule_Label__c),
-                escapeCsvValue(log.Error_Message__c),
-                log.CreatedDate != null ? log.CreatedDate.format() : ''
-            };
-            rows.add(String.join(values, ','));
-        }
-        
-        return String.join(rows, '\n');
+        return 'SELECT Name, Case_Number__c, Original_Status__c, Target_Status__c, ' +
+               'Processing_Result__c, Matched_Rule_Label__c, Error_Message__c, CreatedDate ' +
+               'FROM util_closer_Case_Log__c WHERE ' + whereClause +
+               ' ORDER BY CreatedDate DESC';
     }
     
     /**
@@ -498,14 +473,4 @@ public with sharing class util_closer_LogViewerController {
         return Datetime.newInstance(d, Time.newInstance(0, 0, 0, 0)).formatGmt('yyyy-MM-dd\'T\'HH:mm:ss\'Z\'');
     }
     
-    private static String escapeCsvValue(String value) {
-        if (String.isBlank(value)) {
-            return '';
-        }
-        // Escape quotes and wrap in quotes if contains comma, quote, or newline
-        if (value.contains(',') || value.contains('"') || value.contains('\n')) {
-            return '"' + value.replace('"', '""') + '"';
-        }
-        return value;
-    }
 }
