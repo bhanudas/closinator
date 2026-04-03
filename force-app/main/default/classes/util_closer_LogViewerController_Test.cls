@@ -410,20 +410,22 @@ private class util_closer_LogViewerController_Test {
     }
     
     @isTest
-    static void testExportCaseLogsAsCsv() {
+    static void testGetCaseLogExportQuery() {
         util_closer_Batch_Log__c batchLog = [SELECT Id FROM util_closer_Batch_Log__c WHERE Status__c = 'Completed' AND Execution_Mode__c = 'Simulation' LIMIT 1];
         
         Test.startTest();
-        String csv = util_closer_LogViewerController.exportCaseLogsAsCsv(batchLog.Id, null);
+        String soql = util_closer_LogViewerController.getCaseLogExportQuery(batchLog.Id, null);
         Test.stopTest();
         
-        System.assert(String.isNotBlank(csv), 'CSV should not be blank');
-        System.assert(csv.contains('Log Name'), 'CSV should contain header');
-        System.assert(csv.contains('CLOG-'), 'CSV should contain case log names');
+        System.assert(String.isNotBlank(soql), 'SOQL should not be blank');
+        System.assert(soql.startsWith('SELECT'), 'SOQL should start with SELECT');
+        System.assert(soql.contains('FROM util_closer_Case_Log__c'), 'SOQL should query Case Log object');
+        System.assert(soql.contains(String.valueOf(batchLog.Id)), 'SOQL should contain batch log ID');
+        System.assert(soql.contains('ORDER BY CreatedDate DESC'), 'SOQL should have ORDER BY clause');
     }
     
     @isTest
-    static void testExportCaseLogsAsCsv_WithFilter() {
+    static void testGetCaseLogExportQuery_WithFilter() {
         util_closer_Batch_Log__c batchLog = [SELECT Id FROM util_closer_Batch_Log__c WHERE Status__c = 'Completed' AND Execution_Mode__c = 'Simulation' LIMIT 1];
         
         util_closer_LogViewerController.CaseLogFilter filter = new util_closer_LogViewerController.CaseLogFilter();
@@ -431,13 +433,13 @@ private class util_closer_LogViewerController_Test {
         String filterJson = JSON.serialize(filter);
         
         Test.startTest();
-        String csv = util_closer_LogViewerController.exportCaseLogsAsCsv(batchLog.Id, filterJson);
+        String soql = util_closer_LogViewerController.getCaseLogExportQuery(batchLog.Id, filterJson);
         Test.stopTest();
         
-        System.assert(String.isNotBlank(csv), 'CSV should not be blank');
-        // Count rows (including header)
-        List<String> rows = csv.split('\n');
-        System.assert(rows.size() > 1, 'CSV should have data rows');
+        System.assert(String.isNotBlank(soql), 'SOQL should not be blank');
+        System.assert(soql.contains('Processing_Result__c'), 'SOQL should contain Processing_Result__c in SELECT');
+        System.assert(soql.contains('Matched'), 'SOQL should contain the filter value in WHERE clause');
+        System.assert(soql.contains(String.valueOf(batchLog.Id)), 'SOQL should contain batch log ID');
     }
     
     @isTest

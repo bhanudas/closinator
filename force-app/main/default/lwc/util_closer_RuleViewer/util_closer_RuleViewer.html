@@ -1,0 +1,220 @@
+<template>
+    <lightning-card title="Active Rules" icon-name="standard:dynamic_highlights_panel">
+        <div slot="actions">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                alternative-text="Refresh rules"
+                title="Refresh rules"
+                onclick={handleRefresh}
+                class="slds-m-right_x-small">
+            </lightning-button-icon>
+            <lightning-button-icon
+                icon-name={expandIcon}
+                alternative-text={expandLabel}
+                title={expandLabel}
+                onclick={handleToggleExpand}>
+            </lightning-button-icon>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <!-- Loading State -->
+            <template if:true={isLoading}>
+                <div class="slds-align_absolute-center" style="height: 3rem;">
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- Error State -->
+            <template if:true={hasError}>
+                <div class="slds-box slds-box_x-small slds-theme_error slds-m-bottom_small">
+                    <strong>Error:</strong> {errorMessage}
+                </div>
+            </template>
+
+            <template if:false={isLoading}>
+                <!-- Summary Bar (always visible) -->
+                <div class="summary-bar">
+                    <span class="slds-text-body_small">
+                        <lightning-badge label={ruleCountLabel} class="count-badge"></lightning-badge>
+                    </span>
+                    <template if:true={hasNoRules}>
+                        <span class="slds-text-body_small slds-text-color_weak slds-m-left_small">
+                            No active rules configured.
+                        </span>
+                    </template>
+                </div>
+
+                <!-- Expanded: Rule Accordion -->
+                <template if:true={showRules}>
+                    <div class="rules-container slds-m-top_small">
+                        <lightning-accordion allow-multiple-sections-open>
+                            <template for:each={formattedRules} for:item="rule">
+                                <lightning-accordion-section
+                                    key={rule.developerName}
+                                    name={rule.developerName}
+                                    label={rule.sectionLabel}>
+
+                                    <div class="rule-detail">
+                                        <!-- Core Criteria -->
+                                        <div class="criteria-group">
+                                            <h4 class="criteria-group-title">Status Transition</h4>
+                                            <div class="slds-grid slds-wrap">
+                                                <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                    <span class="rule-label">Source Status</span>
+                                                    <span class="rule-value">{rule.sourceStatus}</span>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                    <span class="rule-label">Target Status</span>
+                                                    <span class="rule-value">{rule.targetStatus}</span>
+                                                </div>
+                                                <template if:true={rule.targetReason}>
+                                                    <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                        <span class="rule-label">Target Reason</span>
+                                                        <span class="rule-value">{rule.targetReason}</span>
+                                                    </div>
+                                                </template>
+                                                <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                    <span class="rule-label">Execution Order</span>
+                                                    <span class="rule-value">{rule.executionOrder}</span>
+                                                </div>
+                                                <template if:true={rule.stopProcessing}>
+                                                    <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                        <span class="rule-label">Stop Processing</span>
+                                                        <span class="rule-value">Yes</span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <template if:true={rule.description}>
+                                                <div class="slds-p-around_xx-small">
+                                                    <span class="rule-label">Description</span>
+                                                    <span class="rule-value rule-description">{rule.description}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <!-- Timing Criteria -->
+                                        <template if:true={rule.hasTimingCriteria}>
+                                            <div class="criteria-group">
+                                                <h4 class="criteria-group-title">Timing Criteria</h4>
+                                                <div class="slds-grid slds-wrap">
+                                                    <template if:true={rule.daysSinceLastModified}>
+                                                        <div class="slds-col slds-size_1-of-3 slds-p-around_xx-small">
+                                                            <span class="rule-label">Days Since Last Modified</span>
+                                                            <span class="rule-value">{rule.daysSinceLastModified}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.daysSinceCreated}>
+                                                        <div class="slds-col slds-size_1-of-3 slds-p-around_xx-small">
+                                                            <span class="rule-label">Days Since Created</span>
+                                                            <span class="rule-value">{rule.daysSinceCreated}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.daysSinceLastActivity}>
+                                                        <div class="slds-col slds-size_1-of-3 slds-p-around_xx-small">
+                                                            <span class="rule-label">Days Since Last Activity</span>
+                                                            <span class="rule-value">{rule.daysSinceLastActivity}</span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Filtering Criteria -->
+                                        <template if:true={rule.hasFilterCriteria}>
+                                            <div class="criteria-group">
+                                                <h4 class="criteria-group-title">Filtering Criteria</h4>
+                                                <div class="slds-grid slds-wrap">
+                                                    <template if:true={rule.recordTypeDeveloperNames}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Record Types (Include)</span>
+                                                            <span class="rule-value">{rule.recordTypeDeveloperNames}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.excludeRecordTypeDeveloperNames}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Record Types (Exclude)</span>
+                                                            <span class="rule-value">{rule.excludeRecordTypeDeveloperNames}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.origins}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Origins</span>
+                                                            <span class="rule-value">{rule.origins}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.ownerNameLike}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Owner Name Like</span>
+                                                            <span class="rule-value">{rule.ownerNameLike}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.lastModifiedByNameLike}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Last Modified By Name Like</span>
+                                                            <span class="rule-value">{rule.lastModifiedByNameLike}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.additionalFilterLogic}>
+                                                        <div class="slds-col slds-size_1-of-1 slds-p-around_xx-small">
+                                                            <span class="rule-label">Additional Filter Logic</span>
+                                                            <span class="rule-value">{rule.additionalFilterLogic}</span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Child Object Criteria -->
+                                        <template if:true={rule.hasChildCriteria}>
+                                            <div class="criteria-group">
+                                                <h4 class="criteria-group-title">Child Object Criteria</h4>
+                                                <div class="slds-grid slds-wrap">
+                                                    <template if:true={rule.childObjectApiName}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Child Object</span>
+                                                            <span class="rule-value">{rule.childObjectApiName}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.childLookupField}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Lookup Field</span>
+                                                            <span class="rule-value">{rule.childLookupField}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.childFilterField}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Filter Field</span>
+                                                            <span class="rule-value">{rule.childFilterField}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.childFilterValue}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Filter Value</span>
+                                                            <span class="rule-value">{rule.childFilterValue}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.childFilterOperator}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Filter Operator</span>
+                                                            <span class="rule-value">{rule.childFilterOperator}</span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:true={rule.requireChildRecord}>
+                                                        <div class="slds-col slds-size_1-of-2 slds-p-around_xx-small">
+                                                            <span class="rule-label">Require Child Record</span>
+                                                            <span class="rule-value">Yes</span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </lightning-accordion-section>
+                            </template>
+                        </lightning-accordion>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>

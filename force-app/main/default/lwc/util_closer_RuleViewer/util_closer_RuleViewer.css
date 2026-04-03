@@ -1,0 +1,57 @@
+.summary-bar {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.count-badge {
+    --slds-c-badge-color-background: var(--slds-g-color-success-base-50, #2e844a);
+    --slds-c-badge-text-color: var(--slds-g-color-neutral-base-100, #ffffff);
+}
+
+.rules-container {
+    background-color: var(--slds-g-color-neutral-base-100, #ffffff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.rule-detail {
+    padding: 0.5rem 0;
+}
+
+.criteria-group {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.criteria-group:last-child {
+    border-bottom: none;
+}
+
+.criteria-group-title {
+    font-size: 0.75rem;
+    color: var(--slds-g-color-neutral-base-30, #706e6b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.rule-label {
+    display: block;
+    font-weight: 600;
+    color: var(--slds-g-color-neutral-base-30, #706e6b);
+    font-size: 0.75rem;
+    margin-bottom: 0.125rem;
+}
+
+.rule-value {
+    display: block;
+    color: var(--slds-g-color-neutral-base-10, #080707);
+    font-size: 0.875rem;
+}
+
+.rule-description {
+    font-style: italic;
+}
