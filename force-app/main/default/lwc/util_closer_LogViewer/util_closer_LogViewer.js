@@ -641,12 +641,23 @@ export default class Util_closer_LogViewer extends NavigationMixin(LightningElem
                 filterJson: JSON.stringify(filter)
             });
 
-            await navigator.clipboard.writeText(soql);
+            this.copyToClipboard(soql);
 
             this.showToast('SOQL Copied to Clipboard', soql, 'success', 'sticky');
         } catch (error) {
             this.showError('Error copying SOQL', error);
         }
+    }
+
+    copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
     }
 
     // Navigation helpers
